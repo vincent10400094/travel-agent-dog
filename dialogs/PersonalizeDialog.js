@@ -118,6 +118,10 @@ class PersonalizeDialog extends ComponentDialog {
     async finalStep(stepContext) {
         console.log('[PersonalizeDialog] final');
         console.log('user reply', stepContext.result);
+        var reply = stepContext.result;
+        if (reply.includes("\""))
+            reply = reply.slice(1, reply.length - 1);
+        console.log('user reply', reply);
         let luisResult = await this.luisRecognizer.executeLuisQuery(stepContext.context);
         let top_indent = LuisRecognizer.topIntent(luisResult, "None", 0.3);
         let user_id = stepContext.context._activity.recipient.id;
@@ -143,17 +147,17 @@ class PersonalizeDialog extends ComponentDialog {
             return await stepContext.replaceDialog(this.initialDialogId, stepContext.options);
         }
         if (this.attractions[user_id] === undefined)
-            this.attractions[user_id] = [stepContext.result];
+            this.attractions[user_id] = [reply];
         else
-            this.attractions[user_id].push(stepContext.result);
+            this.attractions[user_id].push(reply);
         const rewardRequest = {
             value: 1
         };
-        for(var j = 0; j < 3; j++) {
-            for(var i = 0; i < 13; i++) {
-                this.user_feature[user_id][i] = (this.user_feature[user_id][i] + spotToFeature[stepContext.result][i]) / 2;
-            }
+        
+        for(var i = 0; i < 13; i++) {
+            this.user_feature[user_id][i] = (this.user_feature[user_id][i] + spotToFeature[reply][i]) / 2;
         }
+        
         await this.personal_client[user_id][0].events.reward(this.personal_client[user_id][1], rewardRequest);
         return await stepContext.replaceDialog(this.initialDialogId, stepContext.options);
         // Display top choice to user, user agrees or disagrees with top choice
