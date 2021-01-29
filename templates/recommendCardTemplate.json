@@ -28,6 +28,7 @@
                         {
                             "type": "TextBlock",
                             "text": "${description}",
+                            "maxLines": 5,
                             "wrap": true
                         }
                     ]
