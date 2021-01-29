@@ -1,13 +1,13 @@
 const fetch = require('node-fetch');
-const findSpot = require('./utility').findSpot;
-const tourist_spots = require('../data/tourist_spots');
+const utility = require('./utility');
 
 const getInfo = async (name) => {
     var res = await fetch(`https://atlas.microsoft.com/search/fuzzy/json?&api-version=1.0&subscription-key=6rs1RDSRucSV5j_99HpITvMr2UU1p2sFOdDV6Y9RURI&language=zh-TW&query=${encodeURI(name)}&countrySet=TW&lat=25.03914&lon=121.54784&limit=1&radius=20000`);
     var data = await res.json();
+    let info = utility.findSpot(name);
     return {
         name: name,
-        data: findSpot(name, tourist_spots),
+        data: info,
         address: data.results[0].address.freeformAddress,
         position: data.results[0].position
     }
@@ -65,7 +65,7 @@ const getRoute = async (attractions, start) => {
         attractions_info.splice(idx, 1);
         start_info = closest;
     }
-    console.log(schedule);
+    console.log('Schedule:', schedule);
     return schedule;
 };
 

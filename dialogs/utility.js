@@ -6,7 +6,7 @@ const getRoute = require('./getRoute').getRoute;
 const templateCard = require('../templates/recommendCardTemplate');
 const { CardFactory } = require('botbuilder');
 
-function findSpot(title) {
+module.exports.findSpot = (title) => {
     for (let i in PlaceCard) {
         for (let j of PlaceCard[i]) {
             if (j.title == title) {
@@ -16,31 +16,26 @@ function findSpot(title) {
     }
 }
 
-function generateCard(title) {
-    var data = findSpot(title);
+module.exports.generateCard = (title) => {
+    var data = module.exports.findSpot(title);
     var template = new ACData.Template(recommendCardTemplate);
     var cardPayload = template.expand({
         $root: data
     });
     var adaptiveCard = CardFactory.adaptiveCard(cardPayload);
     return adaptiveCard;
-
 }
 
-function scheduleCard(attractions, startPoint) {
-    var data = JSON.stringify(getRoute(attractions, startPoint));
+module.exports.scheduleCard = async (attractions, startPoint) => {
+    var data = await getRoute(attractions, startPoint);
     var cardArray = [];
     for (let i of data) {
         var template = new ACData.Template(scheduleCardTemplate);
         var cardPayload = template.expand({
-            $root: i
+            $root: JSON.stringify(i)
         });
         var adaptiveCard = CardFactory.adaptiveCard(cardPayload);
         cardArray.push(adaptiveCard);
     }
     return cardArray;
 }
-
-module.exports.generateCard = generateCard;
-module.exports.findSpot = findSpot;
-module.exports.scheduleCard = scheduleCard;
