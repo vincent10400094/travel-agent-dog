@@ -10,6 +10,7 @@ const Personalizer = require('@azure/cognitiveservices-personalizer');
 const CognitiveServicesCredentials = require('@azure/ms-rest-azure-js').CognitiveServicesCredentials;
 const readline = require('readline-sync');
 const spotFeature = require('../data/spot_feature.json');
+const generateCard = require('./utility').generateCard;
 
 const DATETIME_PROMPT = 'datetimePrompt';
 const WATERFALL_DIALOG = 'waterfallDialog';
