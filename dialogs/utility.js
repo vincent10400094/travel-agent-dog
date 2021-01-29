@@ -1,6 +1,8 @@
 const ACData = require("adaptivecards-templating");
 const PlaceCard = require('../data/tourist_spots');
-const templateCard = require('../templates/recommendCardTemplate');
+const recommendCardTemplate = require('../templates/recommendCardTemplate');
+const scheduleCardTemplate = require('../templates/scheduleCardTemplate');
+const getRoute = require('./getRoute').getRoute;
 
 function findSpot(title) {
     for (let i in PlaceCard) {
@@ -14,7 +16,7 @@ function findSpot(title) {
 
 function generateCard(title) {
     var data = findSpot(title);
-    var template = new ACData.Template(templateCard);
+    var template = new ACData.Template(recommendCardTemplate);
     var cardPayload = template.expand({
         $root: data
     });
@@ -23,5 +25,20 @@ function generateCard(title) {
 
 }
 
+function scheduleCard(attractions, startPoint) {
+    var data = getRoute(attractions, startPoint);
+    var cardArray = [];
+    for (let i of data) {
+        var template = new ACData.Template(scheduleCardTemplate);
+        var cardPayload = template.expand({
+            $root: i
+        });
+        var adaptiveCard = CardFactory.adaptiveCard(cardPayload);
+        cardArray.push(adaptiveCard);
+    }
+    return cardArray;
+}
+
 module.exports.generateCard = generateCard;
 module.exports.findSpot = findSpot;
+module.exports.scheduleCard = scheduleCard;

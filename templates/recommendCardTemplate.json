@@ -20,11 +20,6 @@
                         },
                         {
                             "type": "TextBlock",
-                            "text": "${area}, 台北市",
-                            "wrap": true
-                        },
-                        {
-                            "type": "TextBlock",
                             "text": "${rating}/5 stars",
                             "isSubtle": true,
                             "spacing": "None",
