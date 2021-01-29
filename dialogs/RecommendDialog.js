@@ -13,12 +13,15 @@ const WATERFALL_DIALOG = 'waterfallDialog';
 const PERSONALIZE_DIALOG = 'personalizeDialog';
 
 class RecommendDialog extends CancelAndHelpDialog {
-    constructor(id) {
+    constructor(id, luisRecognizer) {
         super(id || 'recommendDialog');
+
+        if (!luisRecognizer) throw new Error('[MainDialog]: Missing parameter \'luisRecognizer\' is required');
+        this.luisRecognizer = luisRecognizer;
 
         this.addDialog(new TextPrompt(TEXT_PROMPT))
             .addDialog(new ConfirmPrompt(CONFIRM_PROMPT))
-            .addDialog(new PersonalizeDialog(PERSONALIZE_DIALOG))
+            .addDialog(new PersonalizeDialog(PERSONALIZE_DIALOG, this.luisRecognizer))
             .addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
                 this.destinationStep.bind(this),
                 this.recommendStep.bind(this),
@@ -54,8 +57,6 @@ class RecommendDialog extends CancelAndHelpDialog {
     async recommendStep(stepContext) {
         const recommendDetails = stepContext.options;
         return await stepContext.beginDialog('personalizeDialog', recommendDetails.district);
-        // console.log('[Recommand] end dialog');
-        // return await stepContext.next(recommendDetails.district);
     }
 
     /**
@@ -69,8 +70,8 @@ class RecommendDialog extends CancelAndHelpDialog {
         const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
 
         // Offer a YES/NO prompt.
-        // return await stepContext.prompt(CONFIRM_PROMPT, { prompt: msg });
-        return await stepContext.next(recommendDetails.district);
+        return await stepContext.prompt(CONFIRM_PROMPT, { prompt: msg });
+        // return await stepContext.next(recommendDetails.district);
     }
 
     /**

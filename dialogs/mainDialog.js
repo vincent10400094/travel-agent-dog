@@ -171,7 +171,7 @@ class MainDialog extends ComponentDialog {
         }
 
         // Restart the main dialog with a different message the second time around
-        return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: '還想來點別的行程嗎？' });
+        return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: '推薦完成，還想來點別的行程嗎？' });
     }
 }
 

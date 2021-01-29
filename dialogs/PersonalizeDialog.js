@@ -6,6 +6,7 @@ const { ComponentDialog, TextPrompt, WaterfallDialog } = require('botbuilder-dia
 // const { CancelAndHelpDialog } = require('./cancelAndHelpDialog');
 const uuid = require('uuid');
 const Personalizer = require('@azure/cognitiveservices-personalizer');
+const { LuisRecognizer } = require('botbuilder-ai');
 const CognitiveServicesCredentials = require('@azure/ms-rest-azure-js').CognitiveServicesCredentials;
 const readline = require('readline-sync');
 const spotFeature = require('../data/spot_feature.json');
@@ -15,8 +16,12 @@ const PERSONIZE_WATERFALL_DIALOG = 'personWaterfallDialog';
 const SPOT_PROMPT = 'spotPrompt';
 
 class PersonalizeDialog extends ComponentDialog {
-    constructor(id) {
+    constructor(id, luisRecognizer) {
         super(id || 'personalizeDialog');
+
+        if (!luisRecognizer) throw new Error('[MainDialog]: Missing parameter \'luisRecognizer\' is required');
+        this.luisRecognizer = luisRecognizer;
+
         this.addDialog(new TextPrompt(SPOT_PROMPT));
         this.addDialog(new WaterfallDialog(PERSONIZE_WATERFALL_DIALOG, [
             this.initialStep.bind(this),
@@ -91,10 +96,17 @@ class PersonalizeDialog extends ComponentDialog {
 
     async finalStep(stepContext) {
         console.log('[PersonalizeDialog] final');
-        console.log(stepContext.result);
+        console.log('user reply', stepContext.result);
+        console.log('option:', stepContext.options);
+        let luisResult = await this.luisRecognizer.executeLuisQuery(stepContext.context);
+        let top_indent = LuisRecognizer.topIntent(luisResult, "None", 0.3);
+        if (top_indent == 'Enough') {
+            return await stepContext.endDialog();
+        }
+        return await stepContext.replaceDialog(this.initialDialogId, stepContext.options);
         // Display top choice to user, user agrees or disagrees with top choice
         // const reward = this.getReward(rankResponse.ranking);
-        console.log("\nPersonalization service ranked the actions with the probabilities as below:\n");
+        // console.log("\nPersonalization service ranked the actions with the probabilities as below:\n");
         // Send the reward for the action based on user response.
 
         // <reward>
@@ -104,8 +116,6 @@ class PersonalizeDialog extends ComponentDialog {
 
         // await personalizerClient.events.reward(rankRequest.eventId, rewardRequest);
         // </reward>
-
-        return await stepContext.endDialog();
     }
 
 }

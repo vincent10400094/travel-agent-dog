@@ -39,12 +39,12 @@ const onTurnErrorHandler = async (context, error) => {
     // NOTE: In production environment, you should consider logging this to Azure
     //       application insights. See https://aka.ms/bottelemetry for telemetry 
     //       configuration instructions.
-    console.error(`\n [onTurnError] unhandled error: ${ error }`);
+    console.error(`\n [onTurnError] unhandled error: ${error}`);
 
     // Send a trace activity, which will be displayed in Bot Framework Emulator
     await context.sendTraceActivity(
         'OnTurnError Trace',
-        `${ error }`,
+        `${error}`,
         'https://www.botframework.com/schemas/error',
         'TurnError'
     );
@@ -76,18 +76,18 @@ const userState = new UserState(memoryStorage);
 const LuisAppId = '16b34460-2e75-4e4f-a4bb-7af7def675d8';
 const LuisAPIKey = '774be66709fe4963a200dca0fc2258be';
 const LuisAPIHostName = 'travel-agent-dog-luis.cognitiveservices.azure.com/';
-const luisConfig = { applicationId: LuisAppId, endpointKey: LuisAPIKey, endpoint: `https://${ LuisAPIHostName }` };
+const luisConfig = { applicationId: LuisAppId, endpointKey: LuisAPIKey, endpoint: `https://${LuisAPIHostName}` };
 
 const luisRecognizer = new DogLuis(luisConfig);
 
 // Create the main dialog.
-const recommendDialog = new RecommendDialog(RECOMMEND_DIALOG);
+const recommendDialog = new RecommendDialog(RECOMMEND_DIALOG, luisRecognizer);
 const dialog = new MainDialog(luisRecognizer, recommendDialog);
 const bot = new DialogAndWelcomeBot(conversationState, userState, dialog);
 
 // Create HTTP server
 const server = restify.createServer();
-server.listen(process.env.port || process.env.PORT || 3978, function() {
+server.listen(process.env.port || process.env.PORT || 3978, function () {
     console.log(`\n${server.name} listening to ${server.url}`);
     console.log('\nGet Bot Framework Emulator: https://aka.ms/botframework-emulator');
     console.log('\nTo talk to your bot, open the emulator select "Open Bot"');
