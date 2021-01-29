@@ -28,7 +28,7 @@ function generateCard(title) {
 }
 
 function scheduleCard(attractions, startPoint) {
-    var data = getRoute(attractions, startPoint);
+    var data = JSON.stringify(getRoute(attractions, startPoint));
     var cardArray = [];
     for (let i of data) {
         var template = new ACData.Template(scheduleCardTemplate);
