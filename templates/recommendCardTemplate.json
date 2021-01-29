@@ -39,7 +39,7 @@
                     "items": [
                         {
                             "type": "Image",
-                            "url": "${image}",
+                            "url": "${img}",
                             "size": "auto"
                         }
                     ]
