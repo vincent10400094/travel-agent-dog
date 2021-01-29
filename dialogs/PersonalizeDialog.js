@@ -21,6 +21,7 @@ class PersonalizeDialog extends ComponentDialog {
 
         if (!luisRecognizer) throw new Error('[MainDialog]: Missing parameter \'luisRecognizer\' is required');
         this.luisRecognizer = luisRecognizer;
+        this.attractions = [];
 
         this.addDialog(new TextPrompt(SPOT_PROMPT));
         this.addDialog(new WaterfallDialog(PERSONIZE_WATERFALL_DIALOG, [
@@ -97,12 +98,13 @@ class PersonalizeDialog extends ComponentDialog {
     async finalStep(stepContext) {
         console.log('[PersonalizeDialog] final');
         console.log('user reply', stepContext.result);
-        console.log('option:', stepContext.options);
         let luisResult = await this.luisRecognizer.executeLuisQuery(stepContext.context);
         let top_indent = LuisRecognizer.topIntent(luisResult, "None", 0.3);
         if (top_indent == 'Enough') {
+            console.log(this.attractions);
             return await stepContext.endDialog();
         }
+        this.attractions.push(stepContext.result);
         return await stepContext.replaceDialog(this.initialDialogId, stepContext.options);
         // Display top choice to user, user agrees or disagrees with top choice
         // const reward = this.getReward(rankResponse.ranking);
