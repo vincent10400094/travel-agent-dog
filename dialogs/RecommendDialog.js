@@ -63,6 +63,8 @@ class RecommendDialog extends CancelAndHelpDialog {
      * Confirm the information the user has provided.
      */
     async confirmStep(stepContext) {
+        // stepContext 是行程陣列 ex. [ '殷海光故居', '臺大法學院' ]
+        console.log('Confirm result', stepContext.result);
         const recommendDetails = stepContext.options;
 
         // Capture the results of the previous step
