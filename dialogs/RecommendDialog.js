@@ -43,10 +43,6 @@ class RecommendDialog extends CancelAndHelpDialog {
         return await stepContext.next(recommendDetails.district);
     }
 
-    /**
-     * If a travel date has not been provided, prompt for one.
-     * This will use the DATE_RESOLVER_DIALOG.
-     */
     async recommendStep(stepContext) {
         const recommendDetails = stepContext.options;
         await stepContext.beginDialog('personalizeDialog', recommendDetails.district);
@@ -60,11 +56,12 @@ class RecommendDialog extends CancelAndHelpDialog {
         const recommendDetails = stepContext.options;
 
         // Capture the results of the previous step
-        const messageText = "確定嗎？"
+        const messageText = "行程已經完成囉！"
         const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
 
         // Offer a YES/NO prompt.
-        return await stepContext.prompt(CONFIRM_PROMPT, { prompt: msg });
+        // return await stepContext.prompt(CONFIRM_PROMPT, { prompt: msg });
+        return await stepContext.next(recommendDetails.district);
     }
 
     /**

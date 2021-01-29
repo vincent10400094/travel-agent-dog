@@ -50,12 +50,7 @@
         {
             "type": "Action.Submit",
             "title": "Like",
-            "data": "Like"
-        },
-        {
-            "type": "Action.Submit",
-            "title": "Dislike",
-            "data": "Dislike"
+            "data": "${title}"
         }
     ]
 }

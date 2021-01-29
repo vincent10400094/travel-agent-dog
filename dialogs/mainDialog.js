@@ -67,6 +67,7 @@ class MainDialog extends ComponentDialog {
 
         const messageText = stepContext.options.restartMsg ? stepContext.options.restartMsg : "汪汪汪，我是大瘋狗！";
         const promptMessage = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
+        console.log('intro')
         return await stepContext.prompt('TextPrompt', { prompt: promptMessage });
     }
 
@@ -95,7 +96,6 @@ class MainDialog extends ComponentDialog {
                 recommendDetails.district = district;
                 console.log('LUIS extracted these booking details:', JSON.stringify(recommendDetails));
 
-                // Run the BookingDialog passing in whatever details we have from the LUIS call, it will fill out the remainder.
                 return await stepContext.beginDialog('recommendDialog', recommendDetails);
             }
 
@@ -162,6 +162,7 @@ class MainDialog extends ComponentDialog {
      * It wraps up the sample "book a flight" interaction with a simple confirmation.
      */
     async finalStep(stepContext) {
+        console.log('final');
         if (stepContext.result) {
             const result = stepContext.result;
             const district = result.district;
@@ -169,7 +170,7 @@ class MainDialog extends ComponentDialog {
         }
 
         // Restart the main dialog with a different message the second time around
-        return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: '爽了嗎？' });
+        return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: '還想來點別的行程嗎？' });
     }
 }
 
