@@ -73,9 +73,9 @@ const userState = new UserState(memoryStorage);
 
 // If configured, pass in the FlightBookingRecognizer.  (Defining it externally allows it to be mocked for tests)
 // const { LuisAppId, LuisAPIKey, LuisAPIHostName } = process.env;
-const LuisAppId = '16b34460-2e75-4e4f-a4bb-7af7def675d8';
-const LuisAPIKey = '774be66709fe4963a200dca0fc2258be';
-const LuisAPIHostName = 'travel-agent-dog-luis.cognitiveservices.azure.com/';
+const LuisAppId = '70bca1c4-6284-4142-9ac5-6582ae0f01ac';
+const LuisAPIKey = '3ecb66b0a2324c7493fbfae698870da8';
+const LuisAPIHostName = 'australiaeast.api.cognitive.microsoft.com/';
 const luisConfig = { applicationId: LuisAppId, endpointKey: LuisAPIKey, endpoint: `https://${LuisAPIHostName}` };
 
 const luisRecognizer = new DogLuis(luisConfig);

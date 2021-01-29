@@ -22,7 +22,10 @@ class PersonalizeDialog extends ComponentDialog {
         if (!luisRecognizer) throw new Error('[MainDialog]: Missing parameter \'luisRecognizer\' is required');
         this.luisRecognizer = luisRecognizer;
         this.attractions = {};
-
+        this.advice = {};
+        this.dislike = {};
+        this.user_feature = {};
+        this.personal_client = {};
         this.addDialog(new TextPrompt(SPOT_PROMPT));
         this.addDialog(new WaterfallDialog(PERSONIZE_WATERFALL_DIALOG, [
             this.initialStep.bind(this),
@@ -32,26 +35,24 @@ class PersonalizeDialog extends ComponentDialog {
         this.initialDialogId = PERSONIZE_WATERFALL_DIALOG;
     }
 
-    getActionsList(district, already_seen) {
+    getActionsList(district, already_seen, dislike) {
         if (district.includes('區')) {
             district = district.slice(0, 2);
         }
         // var actionList = spotFeature;
-        if (already_seen) {
-            var action = []
-            for (var i in spotFeature[district]) {
-                if (!already_seen.includes(spotFeature[district][i]["id"])) {
-                    action.push(spotFeature[district][i])
-                }
+        
+        var action = []
+        for (var i in spotFeature[district]) {
+            if (!already_seen.includes(spotFeature[district][i]["id"]) && !dislike.includes(spotFeature[district][i]["id"])) {
+                action.push(spotFeature[district][i])
             }
-            return action;
-        } else {
-            return spotFeature[district];
         }
+        return action;
+        
     }
 
-    getContextFeaturesList() {
-        return [];
+    getContextFeaturesList(user_id) {
+        return [{"feature" : this.user_feature[user_id]}];
     }
 
     getReward(response) {
@@ -70,17 +71,24 @@ class PersonalizeDialog extends ComponentDialog {
         const personalizerClient = new Personalizer.PersonalizerClient(credentials, baseUri);
         let rankRequest = {}
 
+        let user_id = stepContext.context._activity.recipient.id;
+        if (this.attractions[user_id] === undefined) {
+            this.attractions[user_id] = [];
+            this.dislike[user_id] = [];
+            this.advice[user_id] = [];
+            this.user_feature[user_id] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        }
+        
         // Generate an ID to associate with the request.
         rankRequest.eventId = uuid.v1();
-
+        this.personal_client[user_id] = [personalizerClient, rankRequest.eventId];
         // Get context information from the user.
-        rankRequest.contextFeatures = this.getContextFeaturesList(stepContext);
+        rankRequest.contextFeatures = this.getContextFeaturesList(user_id);
         // console.log(stepContext.context);
 
         // Get the actions list to choose from personalization with their features.
-        let user_id = stepContext.context._activity.recipient.id;
-        rankRequest.actions = this.getActionsList(district, this.attractions[user_id]);
-        
+        rankRequest.actions = this.getActionsList(district, this.attractions[user_id], this.dislike[user_id]);
+
         // Exclude an action for personalization ranking. This action will be held at its current position.
         // rankRequest.excludedActions = getExcludedActionsList();
 
@@ -95,11 +103,11 @@ class PersonalizeDialog extends ComponentDialog {
         console.log("\nPersonalization service thinks you would like to have:\n")
         console.log(rankResponse.rewardActionId);
         */
-
+        this.advice[user_id] = [rankResponse.ranking[0].id, rankResponse.ranking[1].id, rankResponse.ranking[2].id]
         // console.log(rankRequest.actions);
         var cards = [generateCard(rankResponse.ranking[0].id), generateCard(rankResponse.ranking[1].id), generateCard(rankResponse.ranking[2].id)];
         await stepContext.context.sendActivity(MessageFactory.carousel(cards));
-        const messageText = "選一個喜歡的吧！都不喜歡就打不喜歡～";
+        const messageText = "選一個喜歡的吧！都不喜歡就打不喜歡～\n 如果行程已經夠了請打規劃行程";
         const promptMessage = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
         console.log('[PersonalizeDialog] initial');
         // return await stepContext.prompt(SPOT_PROMPT, { prompt: promptMessage });
@@ -117,11 +125,28 @@ class PersonalizeDialog extends ComponentDialog {
             let user_attraction = this.attractions[user_id]
             this.attractions[user_id] = []
             return await stepContext.endDialog(user_attraction);
+        } else if (top_indent == 'Reject') {
+            console.log("Reject");
+            for(var i in this.advice[user_id]) {
+                this.dislike[user_id].push(this.advice[user_id][i])
+            }
+            const rewardRequest = {
+                value: 0
+            };
+            await this.personal_client[user_id][0].events.reward(this.personal_client[user_id][1], rewardRequest);
+            return await stepContext.replaceDialog(this.initialDialogId, stepContext.options);
         }
         if (this.attractions[user_id] === undefined)
             this.attractions[user_id] = [stepContext.result];
         else
             this.attractions[user_id].push(stepContext.result);
+        const rewardRequest = {
+            value: 1
+        };
+        // for(var i = 0; i < 13; i++) {
+        //     this.user_feature[user_id] += 
+        // }
+        await this.personal_client[user_id][0].events.reward(this.personal_client[user_id][1], rewardRequest);
         return await stepContext.replaceDialog(this.initialDialogId, stepContext.options);
         // Display top choice to user, user agrees or disagrees with top choice
         // const reward = this.getReward(rankResponse.ranking);
