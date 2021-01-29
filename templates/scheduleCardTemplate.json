@@ -16,12 +16,12 @@
                             "items": [
                                 {
                                     "type": "Image",
-                                    "url": "${img}",
+                                    "url": "${from.img}",
                                     "size": "auto"
                                 },
                                 {
                                     "type": "TextBlock",
-                                    "text": "${title}",
+                                    "text": "${from.name}",
                                     "horizontalAlignment": "Center",
                                     "weight": "Bolder",
                                     "wrap": true
@@ -61,13 +61,13 @@
                             "items": [
                                 {
                                     "type": "Image",
-                                    "url": "${img}",
+                                    "url": "${to.img}",
                                     "size": "auto",
                                     "horizontalAlignment": "center"
                                 },
                                 {
                                     "type": "TextBlock",
-                                    "text": "${title}",
+                                    "text": "${to.name}",
                                     "horizontalAlignment": "center",
                                     "weight": "Bolder",
                                     "wrap": true

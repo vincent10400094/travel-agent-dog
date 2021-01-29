@@ -6,6 +6,7 @@ const { InputHints, MessageFactory } = require('botbuilder');
 const { ConfirmPrompt, TextPrompt, WaterfallDialog } = require('botbuilder-dialogs');
 const { CancelAndHelpDialog } = require('./cancelAndHelpDialog');
 const { PersonalizeDialog } = require('./PersonalizeDialog');
+const scheduleCard = require('./utility').scheduleCard
 
 const CONFIRM_PROMPT = 'confirmPrompt';
 const TEXT_PROMPT = 'textPrompt';
@@ -68,12 +69,14 @@ class RecommendDialog extends CancelAndHelpDialog {
         const recommendDetails = stepContext.options;
 
         // Capture the results of the previous step
-        const messageText = "行程已經完成囉！" + JSON.stringify(stepContext.result);
-        console.log(messageText);
-        const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
+        // const messageText = "行程已經完成囉！" + JSON.stringify(stepContext.result);
+        // console.log(messageText);
+        // const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
+        var cardArray = await scheduleCard(stepContext.result.slice(1), stepContext.result[0]);
+        return await stepContext.context.sendActivity(MessageFactory.carousel(cardArray));
 
         // Offer a YES/NO prompt.
-        return await stepContext.prompt(CONFIRM_PROMPT, { prompt: msg });
+        // return await stepContext.prompt(CONFIRM_PROMPT, { prompt: msg });
         // return await stepContext.next(recommendDetails.district);
     }
 
