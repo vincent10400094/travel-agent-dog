@@ -10,6 +10,7 @@ const { LuisRecognizer } = require('botbuilder-ai');
 const CognitiveServicesCredentials = require('@azure/ms-rest-azure-js').CognitiveServicesCredentials;
 const readline = require('readline-sync');
 const spotFeature = require('../data/spot_feature.json');
+const spotToFeature = require('../data/id_to_feature.json');
 const generateCard = require('./utility').generateCard;
 
 const PERSONIZE_WATERFALL_DIALOG = 'personWaterfallDialog';
@@ -133,6 +134,11 @@ class PersonalizeDialog extends ComponentDialog {
             const rewardRequest = {
                 value: 0
             };
+            for(var j = 0; j < 3; j++) {
+                for(var i = 0; i < 13; i++) {
+                    this.user_feature[user_id][i] -= spotToFeature[this.advice[user_id][j]][i] / 6;
+                }
+            }
             await this.personal_client[user_id][0].events.reward(this.personal_client[user_id][1], rewardRequest);
             return await stepContext.replaceDialog(this.initialDialogId, stepContext.options);
         }
@@ -143,9 +149,11 @@ class PersonalizeDialog extends ComponentDialog {
         const rewardRequest = {
             value: 1
         };
-        // for(var i = 0; i < 13; i++) {
-        //     this.user_feature[user_id] += 
-        // }
+        for(var j = 0; j < 3; j++) {
+            for(var i = 0; i < 13; i++) {
+                this.user_feature[user_id][i] = (this.user_feature[user_id][i] + spotToFeature[stepContext.result][i]) / 2;
+            }
+        }
         await this.personal_client[user_id][0].events.reward(this.personal_client[user_id][1], rewardRequest);
         return await stepContext.replaceDialog(this.initialDialogId, stepContext.options);
         // Display top choice to user, user agrees or disagrees with top choice
