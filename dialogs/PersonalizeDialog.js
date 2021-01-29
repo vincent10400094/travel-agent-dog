@@ -103,6 +103,7 @@ class PersonalizeDialog extends ComponentDialog {
         let user_id = stepContext.context._activity.recipient.id;
         if (top_indent == 'Enough') {
             console.log(this.attractions[user_id]);
+            this.attractions[user_id] = []
             return await stepContext.endDialog(this.attractions[user_id]);
         }
         if (this.attractions[user_id] === undefined)
