@@ -69,14 +69,14 @@ class RecommendDialog extends CancelAndHelpDialog {
         const recommendDetails = stepContext.options;
 
         // Capture the results of the previous step
-        const messageText = "行程已經完成囉！" + JSON.stringify(stepContext.result);
-        console.log(messageText);
-        const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
-        var cardArray = scheduleCard(stepContext.result.slice(1), stepContext.result[0]);
-        await stepContext.context.sendActivity(MessageFactory.carousel(cardArray));
+        // const messageText = "行程已經完成囉！" + JSON.stringify(stepContext.result);
+        // console.log(messageText);
+        // const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
+        var cardArray = await scheduleCard(stepContext.result.slice(1), stepContext.result[0]);
+        return await stepContext.context.sendActivity(MessageFactory.carousel(cardArray));
 
         // Offer a YES/NO prompt.
-        return await stepContext.prompt(CONFIRM_PROMPT, { prompt: msg });
+        // return await stepContext.prompt(CONFIRM_PROMPT, { prompt: msg });
         // return await stepContext.next(recommendDetails.district);
     }
 
