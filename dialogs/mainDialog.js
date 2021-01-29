@@ -1,27 +1,32 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
-
+'use strict'
+const { CardFactory } = require('botbuilder');
 const { TimexProperty } = require('@microsoft/recognizers-text-data-types-timex-expression');
 const { MessageFactory, InputHints } = require('botbuilder');
 const { LuisRecognizer } = require('botbuilder-ai');
 const { ComponentDialog, DialogSet, DialogTurnStatus, TextPrompt, WaterfallDialog } = require('botbuilder-dialogs');
 const moment = require('moment-timezone');
+const ACData = require("adaptivecards-templating");
 
 const MAIN_WATERFALL_DIALOG = 'mainWaterfallDialog';
 
+const WelcomeCard = require('../templates/welcomeCard.json');
+
 class MainDialog extends ComponentDialog {
-    constructor(luisRecognizer, bookingDialog) {
+    constructor(luisRecognizer, recommendDialog) {
         super('MainDialog');
 
         if (!luisRecognizer) throw new Error('[MainDialog]: Missing parameter \'luisRecognizer\' is required');
         this.luisRecognizer = luisRecognizer;
+        this.destinations = [];
 
-        if (!bookingDialog) throw new Error('[MainDialog]: Missing parameter \'bookingDialog\' is required');
+        if (!recommendDialog) throw new Error('[MainDialog]: Missing parameter \'recommendDialog\' is required');
 
         // Define the main dialog and its related components.
         // This is a sample "book a flight" dialog.
         this.addDialog(new TextPrompt('TextPrompt'))
-            .addDialog(bookingDialog)
+            .addDialog(recommendDialog)
             .addDialog(new WaterfallDialog(MAIN_WATERFALL_DIALOG, [
                 this.introStep.bind(this),
                 this.actStep.bind(this),
@@ -43,6 +48,7 @@ class MainDialog extends ComponentDialog {
 
         const dialogContext = await dialogSet.createContext(turnContext);
         const results = await dialogContext.continueDialog();
+        // console.log(results);
         if (results.status === DialogTurnStatus.empty) {
             await dialogContext.beginDialog(this.id);
         }
@@ -60,8 +66,8 @@ class MainDialog extends ComponentDialog {
             return await stepContext.next();
         }
 
-        const weekLaterDate = moment().add(7, 'days').format('MMMM D, YYYY');
-        const messageText = stepContext.options.restartMsg ? stepContext.options.restartMsg : `What can I help you with today?\nSay something like "Book a flight from Paris to Berlin on ${ weekLaterDate }"`;
+        // const weekLaterDate = moment().add(7, 'days').format('MMMM D, YYYY');
+        const messageText = stepContext.options.restartMsg ? stepContext.options.restartMsg : "汪汪汪，你好，我是大瘋狗！";
         const promptMessage = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
         return await stepContext.prompt('TextPrompt', { prompt: promptMessage });
     }
@@ -71,46 +77,76 @@ class MainDialog extends ComponentDialog {
      * Then, it hands off to the bookingDialog child dialog to collect any remaining details.
      */
     async actStep(stepContext) {
-        const bookingDetails = {};
+        const recommendDetails = {};
 
         if (!this.luisRecognizer.isConfigured) {
             // LUIS is not configured, we just run the BookingDialog path.
-            return await stepContext.beginDialog('bookingDialog', bookingDetails);
+            return await stepContext.beginDialog('recommendDialog', recommendDetails);
         }
 
         // Call LUIS and gather any potential booking details. (Note the TurnContext has the response to the prompt)
         const luisResult = await this.luisRecognizer.executeLuisQuery(stepContext.context);
-        switch (LuisRecognizer.topIntent(luisResult)) {
-        case 'BookFlight': {
-            // Extract the values for the composite entities from the LUIS result.
-            const fromEntities = this.luisRecognizer.getFromEntities(luisResult);
-            const toEntities = this.luisRecognizer.getToEntities(luisResult);
+        console.log('Intent: ', LuisRecognizer.topIntent(luisResult));
+        switch (LuisRecognizer.topIntent(luisResult, 'None', 0.3)) {
+            case 'EnterRegion': {
+                // Extract the values for the composite entities from the LUIS result.
+                // console.log(luisResult.entities.$instance.Region);
+                const district = this.luisRecognizer.getDistrict(luisResult);
+                // console.log(district);
+    
+                // Show a warning for districts not in Taipei
+                await this.showWarningForUnsupportedCities(stepContext.context, district);
+    
+                // Initialize recommendDetails.
+                recommendDetails.district = district;
+                // console.log('LUIS extracted these details:', JSON.stringify(recommendDetails));
+                // Run RecommendDialog.
+                await stepContext.beginDialog('recommendDialog', recommendDetails);
+                console.log('I want to fuck you');
+                break;
+            }
+    
+            case 'FindSpot': {
+                const getWeatherMessageText = 'TODO: get weather flow here';
+                await stepContext.context.sendActivity(getWeatherMessageText, getWeatherMessageText, InputHints.IgnoringInput);
+                break;
+            }
+            
+            case 'FindFood': {
+                // var testCard = CardFactory.adaptiveCard(TestCard);
+                // console.log(testCard);
+                // await stepContext.context.sendActivity({ attachments: [testCard] });
+                break;
+            }
+            
+            case 'Miscellaneous': {
+                const messageText = '我不擅長聊天欸...';
+                await stepContext.context.sendActivity(messageText, messageText, InputHints.IgnoringInput);
+                break;
+            }
+            
+            default: {
+                // Catch all for unhandled intents
+                const didntUnderstandMessageText = '不好意思，我沒有聽懂欸...汪汪！';
+                await stepContext.context.sendActivity(didntUnderstandMessageText, didntUnderstandMessageText, InputHints.IgnoringInput);
+                
+                // // Create a Template instance from the template payload
+                // var template = new ACData.Template(welcomeCard);
+                var welcomeCard = CardFactory.adaptiveCard(WelcomeCard);
 
-            // Show a warning for Origin and Destination if we can't resolve them.
-            await this.showWarningForUnsupportedCities(stepContext.context, fromEntities, toEntities);
+                // // Expand the template with your `$root` data object.
+                // // This binds it to the data and produces the final Adaptive Card payload
+                // var cardPayload = template.expand({
+                //     $root: DataCard
+                // });
 
-            // Initialize BookingDetails with any entities we may have found in the response.
-            bookingDetails.destination = toEntities.airport;
-            bookingDetails.origin = fromEntities.airport;
-            bookingDetails.travelDate = this.luisRecognizer.getTravelDate(luisResult);
-            console.log('LUIS extracted these booking details:', JSON.stringify(bookingDetails));
-
-            // Run the BookingDialog passing in whatever details we have from the LUIS call, it will fill out the remainder.
-            return await stepContext.beginDialog('bookingDialog', bookingDetails);
-        }
-
-        case 'GetWeather': {
-            // We haven't implemented the GetWeatherDialog so we just display a TODO message.
-            const getWeatherMessageText = 'TODO: get weather flow here';
-            await stepContext.context.sendActivity(getWeatherMessageText, getWeatherMessageText, InputHints.IgnoringInput);
-            break;
-        }
-
-        default: {
-            // Catch all for unhandled intents
-            const didntUnderstandMessageText = `Sorry, I didn't get that. Please try asking in a different way (intent was ${ LuisRecognizer.topIntent(luisResult) })`;
-            await stepContext.context.sendActivity(didntUnderstandMessageText, didntUnderstandMessageText, InputHints.IgnoringInput);
-        }
+                // // OPTIONAL: Render the card (requires that the adaptivecards library be loaded)
+                // var adaptiveCard = CardFactory.adaptiveCard(cardPayload);
+                // var cardArray = [adaptiveCard, adaptiveCard];
+                
+                // await stepContext.context.sendActivity(MessageFactory.carousel(cardArray));
+                await stepContext.context.sendActivity({ attachments: [welcomeCard] });
+            }
         }
 
         return await stepContext.next();
@@ -121,18 +157,10 @@ class MainDialog extends ComponentDialog {
      * In some cases LUIS will recognize the From and To composite entities as a valid cities but the From and To Airport values
      * will be empty if those entity values can't be mapped to a canonical item in the Airport.
      */
-    async showWarningForUnsupportedCities(context, fromEntities, toEntities) {
-        const unsupportedCities = [];
-        if (fromEntities.from && !fromEntities.airport) {
-            unsupportedCities.push(fromEntities.from);
-        }
-
-        if (toEntities.to && !toEntities.airport) {
-            unsupportedCities.push(toEntities.to);
-        }
-
-        if (unsupportedCities.length) {
-            const messageText = `Sorry but the following airports are not supported: ${ unsupportedCities.join(', ') }`;
+    async showWarningForUnsupportedCities(context, district) {
+        const supportedDistrict = ['北投', '士林', '內湖', '松山', '中山', '大同', '南港', '信義', '大安', '中正', '萬華', '文山', '北投區', '士林區', '內湖區', '松山區', '中山區', '大同區', '南港區', '信義區', '大安區', '中正區', '萬華區', '文山區'];
+        const messageText = '很抱歉，旅遊大瘋狗的管轄範圍只有台北市！';
+        if (!supportedDistrict.includes(district)) {
             await context.sendActivity(messageText, messageText, InputHints.IgnoringInput);
         }
     }
@@ -142,22 +170,8 @@ class MainDialog extends ComponentDialog {
      * It wraps up the sample "book a flight" interaction with a simple confirmation.
      */
     async finalStep(stepContext) {
-        // If the child dialog ("bookingDialog") was cancelled or the user failed to confirm, the Result here will be null.
-        if (stepContext.result) {
-            const result = stepContext.result;
-            // Now we have all the booking details.
-
-            // This is where calls to the booking AOU service or database would go.
-
-            // If the call to the booking service was successful tell the user.
-            const timeProperty = new TimexProperty(result.travelDate);
-            const travelDateMsg = timeProperty.toNaturalLanguage(new Date(Date.now()));
-            const msg = `I have you booked to ${ result.destination } from ${ result.origin } on ${ travelDateMsg }.`;
-            await stepContext.context.sendActivity(msg, msg, InputHints.IgnoringInput);
-        }
-
         // Restart the main dialog with a different message the second time around
-        return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: 'What else can I do for you?' });
+        return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: '還需要幫助嗎？' });
     }
 }
 

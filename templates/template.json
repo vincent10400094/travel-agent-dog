@@ -1,0 +1,66 @@
+{
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "type": "AdaptiveCard",
+    "version": "1.2",
+    "body": [
+        {
+            "type": "ColumnSet",
+            "columns": [
+                {
+                    "type": "Column",
+                    "width": 2,
+                    "items": [
+                        {
+                            "type": "TextBlock",
+                            "text": "${title}",
+                            "weight": "Bolder",
+                            "size": "ExtraLarge",
+                            "spacing": "None",
+                            "wrap": true
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": "${area}, 台北市",
+                            "wrap": true
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": "${rating}/5 stars",
+                            "isSubtle": true,
+                            "spacing": "None",
+                            "wrap": true
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": "${description}",
+                            "wrap": true
+                        }
+                    ]
+                },
+                {
+                    "type": "Column",
+                    "width": 1,
+                    "items": [
+                        {
+                            "type": "Image",
+                            "url": "${image}",
+                            "size": "auto"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "Action.Submit",
+            "title": "Like",
+            "data": "Like"
+        },
+        {
+            "type": "Action.Submit",
+            "title": "Dislike",
+            "data": "Dislike"
+        }
+    ]
+}

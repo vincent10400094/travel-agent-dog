@@ -16,15 +16,15 @@ const restify = require('restify');
 // See https://aka.ms/bot-services to learn more about the different parts of a bot.
 const { BotFrameworkAdapter, ConversationState, InputHints, MemoryStorage, UserState } = require('botbuilder');
 
-const { FlightBookingRecognizer } = require('./dialogs/flightBookingRecognizer');
+const { DogLuis } = require('./dialogs/DogLuis');
 
 // This bot's main dialog.
 const { DialogAndWelcomeBot } = require('./bots/dialogAndWelcomeBot');
 const { MainDialog } = require('./dialogs/mainDialog');
 
 // the bot's booking dialog
-const { BookingDialog } = require('./dialogs/bookingDialog');
-const BOOKING_DIALOG = 'bookingDialog';
+const { RecommendDialog } = require('./dialogs/RecommendDialog');
+const RECOMMEND_DIALOG = 'recommendDialog';
 
 // Create adapter.
 // See https://aka.ms/about-bot-adapter to learn more about adapters.
@@ -72,20 +72,23 @@ const conversationState = new ConversationState(memoryStorage);
 const userState = new UserState(memoryStorage);
 
 // If configured, pass in the FlightBookingRecognizer.  (Defining it externally allows it to be mocked for tests)
-const { LuisAppId, LuisAPIKey, LuisAPIHostName } = process.env;
+// const { LuisAppId, LuisAPIKey, LuisAPIHostName } = process.env;
+const LuisAppId = '16b34460-2e75-4e4f-a4bb-7af7def675d8';
+const LuisAPIKey = '774be66709fe4963a200dca0fc2258be';
+const LuisAPIHostName = 'travel-agent-dog-luis.cognitiveservices.azure.com/';
 const luisConfig = { applicationId: LuisAppId, endpointKey: LuisAPIKey, endpoint: `https://${ LuisAPIHostName }` };
 
-const luisRecognizer = new FlightBookingRecognizer(luisConfig);
+const luisRecognizer = new DogLuis(luisConfig);
 
 // Create the main dialog.
-const bookingDialog = new BookingDialog(BOOKING_DIALOG);
-const dialog = new MainDialog(luisRecognizer, bookingDialog);
+const recommendDialog = new RecommendDialog(RECOMMEND_DIALOG);
+const dialog = new MainDialog(luisRecognizer, recommendDialog);
 const bot = new DialogAndWelcomeBot(conversationState, userState, dialog);
 
 // Create HTTP server
 const server = restify.createServer();
 server.listen(process.env.port || process.env.PORT || 3978, function() {
-    console.log(`\n${ server.name } listening to ${ server.url }`);
+    console.log(`\n${server.name} listening to ${server.url}`);
     console.log('\nGet Bot Framework Emulator: https://aka.ms/botframework-emulator');
     console.log('\nTo talk to your bot, open the emulator select "Open Bot"');
 });

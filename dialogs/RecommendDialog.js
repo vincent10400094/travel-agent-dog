@@ -1,79 +1,82 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-const { InputHints, MessageFactory } = require('botbuilder');
-const { DateTimePrompt, WaterfallDialog } = require('botbuilder-dialogs');
-const { CancelAndHelpDialog } = require('./cancelAndHelpDialog');
 const { TimexProperty } = require('@microsoft/recognizers-text-data-types-timex-expression');
+const { InputHints, MessageFactory } = require('botbuilder');
+const { ConfirmPrompt, TextPrompt, WaterfallDialog } = require('botbuilder-dialogs');
+const { CancelAndHelpDialog } = require('./cancelAndHelpDialog');
+const { PersonalizeDialog } = require('./PersonalizeDialog');
 
-const DATETIME_PROMPT = 'datetimePrompt';
+const CONFIRM_PROMPT = 'confirmPrompt';
+const PERSONALIZE_DIALOG = 'personalizeDialog';
+const TEXT_PROMPT = 'textPrompt';
 const WATERFALL_DIALOG = 'waterfallDialog';
 
-class DateResolverDialog extends CancelAndHelpDialog {
+class RecommendDialog extends CancelAndHelpDialog {
     constructor(id) {
-        super(id || 'dateResolverDialog');
-        this.addDialog(new DateTimePrompt(DATETIME_PROMPT, this.dateTimePromptValidator.bind(this)))
+        super(id || 'recommendDialog');
+
+        this.addDialog(new TextPrompt(TEXT_PROMPT))
+            .addDialog(new ConfirmPrompt(CONFIRM_PROMPT))
+            .addDialog(new PersonalizeDialog(PERSONALIZE_DIALOG))
             .addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
-                this.initialStep.bind(this),
+                this.districtStep.bind(this),
+                this.recommendStep.bind(this),
+                this.confirmStep.bind(this),
                 this.finalStep.bind(this)
             ]));
 
         this.initialDialogId = WATERFALL_DIALOG;
     }
 
-    async initialStep(stepContext) {
-        const timex = stepContext.options.date;
-
-        const promptMessageText = 'On what date would you like to travel?';
-        const promptMessage = MessageFactory.text(promptMessageText, promptMessageText, InputHints.ExpectingInput);
-
-        const repromptMessageText = "I'm sorry, for best results, please enter your travel date including the month, day and year.";
-        const repromptMessage = MessageFactory.text(repromptMessageText, repromptMessageText, InputHints.ExpectingInput);
-
-        if (!timex) {
-            // We were not given any date at all so prompt the user.
-            return await stepContext.prompt(DATETIME_PROMPT,
-                {
-                    prompt: promptMessage,
-                    retryPrompt: repromptMessage
-                });
+    /**
+     * If a destination city has not been provided, prompt for one.
+     */
+    async districtStep(stepContext) {
+        const recommendDetails = stepContext.options;
+        while (!recommendDetails.district) {
+            const messageText = '請告訴我你想去台北市的哪個區！';
+            const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
+            await stepContext.prompt(TEXT_PROMPT, { prompt: msg });
         }
-        // We have a Date we just need to check it is unambiguous.
-        const timexProperty = new TimexProperty(timex);
-        if (!timexProperty.types.has('definite')) {
-            // This is essentially a "reprompt" of the data we were given up front.
-            return await stepContext.prompt(DATETIME_PROMPT, { prompt: repromptMessage });
-        }
-        return await stepContext.next([{ timex: timex }]);
+        return await stepContext.next(recommendDetails.district);
     }
 
+    /**
+     * If a travel date has not been provided, prompt for one.
+     * This will use the DATE_RESOLVER_DIALOG.
+     */
+    async recommendStep(stepContext) {
+        const district = stepContext.result;
+        await stepContext.beginDialog('personalizeDialog', district);
+        return await stepContext.next(district);
+    }
+
+    /**
+     * Confirm the information the user has provided.
+     */
+    async confirmStep(stepContext) {
+        const district = stepContext.options;
+        return await stepContext.next(district);
+    }
+
+    /**
+     * Complete the interaction and end the dialog.
+     */
     async finalStep(stepContext) {
-        const timex = stepContext.result[0].timex;
-        return await stepContext.endDialog(timex);
-    }
-
-    async dateTimePromptValidator(promptContext) {
-        if (promptContext.recognized.succeeded) {
-            // This value will be a TIMEX. And we are only interested in a Date so grab the first result and drop the Time part.
-            // TIMEX is a format that represents DateTime expressions that include some ambiguity. e.g. missing a Year.
-            const timex = promptContext.recognized.value[0].timex.split('T')[0];
-
-            // If this is a definite Date including year, month and day we are good otherwise reprompt.
-            // A better solution might be to let the user know what part is actually missing.
-            return new TimexProperty(timex).types.has('definite');
-        }
-        return false;
+        const district = stepContext.options;
+        return await stepContext.endDialog(district);
     }
 }
 
-module.exports.DateResolverDialog = DateResolverDialog;
+module.exports.RecommendDialog = RecommendDialog;
 
 // SIG // Begin signature block
 // SIG // MIInNgYJKoZIhvcNAQcCoIInJzCCJyMCAQExDzANBglg
 // SIG // hkgBZQMEAgEFADB3BgorBgEEAYI3AgEEoGkwZzAyBgor
 // SIG // BgEEAYI3AgEeMCQCAQEEEBDgyQbOONQRoqMAEEvTUJAC
 // SIG // AQACAQACAQACAQACAQAwMTANBglghkgBZQMEAgEFAAQg
-// SIG // K7ojxj+otT+dsZ9zbZO+7AfqNS7GWJMV/Ixt9BCfJ0mg
+// SIG // 3p1RxyHjJQVGf5lPnqnlLpbfk4ZbT2oViSm7pVlx3Yag
 // SIG // ghFlMIIIdzCCB1+gAwIBAgITNgAAAQl3quySnj9vOwAB
 // SIG // AAABCTANBgkqhkiG9w0BAQsFADBBMRMwEQYKCZImiZPy
 // SIG // LGQBGRYDR0JMMRMwEQYKCZImiZPyLGQBGRYDQU1FMRUw
@@ -214,54 +217,54 @@ module.exports.DateResolverDialog = DateResolverDialog;
 // SIG // AxMMQU1FIENTIENBIDAxAhM2AAABCXeq7JKeP287AAEA
 // SIG // AAEJMA0GCWCGSAFlAwQCAQUAoIGuMBkGCSqGSIb3DQEJ
 // SIG // AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAM
-// SIG // BgorBgEEAYI3AgEVMC8GCSqGSIb3DQEJBDEiBCCtAdaU
-// SIG // 8T4tn0kGBr76iWEUkEjx7+8lbSFUtR1ffus9lDBCBgor
+// SIG // BgorBgEEAYI3AgEVMC8GCSqGSIb3DQEJBDEiBCD11YCM
+// SIG // KZucsRzu5j9Z9ixg+HkAt7HiFgjWA3zdNUfdIzBCBgor
 // SIG // BgEEAYI3AgEMMTQwMqAUgBIATQBpAGMAcgBvAHMAbwBm
 // SIG // AHShGoAYaHR0cDovL3d3dy5taWNyb3NvZnQuY29tMA0G
-// SIG // CSqGSIb3DQEBAQUABIIBAE7+IJz7B0mhI/qRu41O0fBo
-// SIG // vJCV0l8PBbzPs5jODNLit1+ZHYSwByXOQ4yELGbAW/A2
-// SIG // fCbhVII+WFcDDjlYQqzzAAUrjtqRcbtMXjbuXgRJUMlc
-// SIG // iX90lFNhw6qXh3zTWHNOy7Qm1Z4VyEf6nEcZp4m1AVJ9
-// SIG // vgp8B5deo0CLhlIBgUyUFQGKgZ4FTcHl2jb9336YvcXd
-// SIG // 3CvE0odD46oOw4OfvY0uONNtOm9OM8Y/+rPZeI7yAk2m
-// SIG // 3rLfFt1/FmQUa7wFyI3J4gVAhRO/enr6e8wnMZJ24K5/
-// SIG // JQHAyAyubMBPapQ18vXqOAyeRaIw0loCJk89yezz/7FB
-// SIG // udxRDLiE+2uhghLxMIIS7QYKKwYBBAGCNwMDATGCEt0w
+// SIG // CSqGSIb3DQEBAQUABIIBAFmmgWMceceda16Ou8297SWC
+// SIG // AK7c33FhLJhDuUhMXaMNAhsEEbcOjyObqyzklY/65zW/
+// SIG // qdWAGbbzdtlU3eRuLcr1Os/3LJJ+KYpQh+FNHAD2FUen
+// SIG // 3MVdaSnXDLu+cPYEmECDeNz1IJOdvHFrVsFgTP7I/Ogy
+// SIG // XeM3AF7kE9z7wwspmn5ezO3Iq92ecp1Uq9RlGrm2GL1D
+// SIG // MHXhbIROEEv/Id7lrKAYyCZj37zVZoDSh8byChbjI+Tg
+// SIG // R/PEYuOeSrBF+9r3ZRaw4T1NYpy7Cp/gimX1u0hnE6Xh
+// SIG // JpyOsK8zE9xWjkcznARW6wepsfuVq0GckMO8F3gjutVG
+// SIG // lkn7rC/8kuuhghLxMIIS7QYKKwYBBAGCNwMDATGCEt0w
 // SIG // ghLZBgkqhkiG9w0BBwKgghLKMIISxgIBAzEPMA0GCWCG
 // SIG // SAFlAwQCAQUAMIIBVQYLKoZIhvcNAQkQAQSgggFEBIIB
 // SIG // QDCCATwCAQEGCisGAQQBhFkKAwEwMTANBglghkgBZQME
-// SIG // AgEFAAQgAwzIr1cFNvbT4dF+fP0M2lVCMATwKfMMetuR
-// SIG // bHn4FIoCBl+76zcTMhgTMjAyMDEyMTAxODU0MzAuNDYx
+// SIG // AgEFAAQgPPQbt6uzIQHqDRu/aKbK7u9de2skyDoE0iXd
+// SIG // NhZa4bACBl+7z2k/GRgTMjAyMDEyMTAxODU0NDcuNjQ3
 // SIG // WjAEgAIB9KCB1KSB0TCBzjELMAkGA1UEBhMCVVMxEzAR
 // SIG // BgNVBAgTCldhc2hpbmd0b24xEDAOBgNVBAcTB1JlZG1v
 // SIG // bmQxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlv
 // SIG // bjEpMCcGA1UECxMgTWljcm9zb2Z0IE9wZXJhdGlvbnMg
 // SIG // UHVlcnRvIFJpY28xJjAkBgNVBAsTHVRoYWxlcyBUU1Mg
-// SIG // RVNOOjMyQkQtRTNENS0zQjFEMSUwIwYDVQQDExxNaWNy
+// SIG // RVNOOkY3QTYtRTI1MS0xNTBBMSUwIwYDVQQDExxNaWNy
 // SIG // b3NvZnQgVGltZS1TdGFtcCBTZXJ2aWNloIIORDCCBPUw
-// SIG // ggPdoAMCAQICEzMAAAEuqNIZB5P0a+gAAAAAAS4wDQYJ
+// SIG // ggPdoAMCAQICEzMAAAEli96LbHImMd0AAAAAASUwDQYJ
 // SIG // KoZIhvcNAQELBQAwfDELMAkGA1UEBhMCVVMxEzARBgNV
 // SIG // BAgTCldhc2hpbmd0b24xEDAOBgNVBAcTB1JlZG1vbmQx
 // SIG // HjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlvbjEm
 // SIG // MCQGA1UEAxMdTWljcm9zb2Z0IFRpbWUtU3RhbXAgUENB
-// SIG // IDIwMTAwHhcNMTkxMjE5MDExNTA1WhcNMjEwMzE3MDEx
-// SIG // NTA1WjCBzjELMAkGA1UEBhMCVVMxEzARBgNVBAgTCldh
+// SIG // IDIwMTAwHhcNMTkxMjE5MDExNDU4WhcNMjEwMzE3MDEx
+// SIG // NDU4WjCBzjELMAkGA1UEBhMCVVMxEzARBgNVBAgTCldh
 // SIG // c2hpbmd0b24xEDAOBgNVBAcTB1JlZG1vbmQxHjAcBgNV
 // SIG // BAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlvbjEpMCcGA1UE
 // SIG // CxMgTWljcm9zb2Z0IE9wZXJhdGlvbnMgUHVlcnRvIFJp
-// SIG // Y28xJjAkBgNVBAsTHVRoYWxlcyBUU1MgRVNOOjMyQkQt
-// SIG // RTNENS0zQjFEMSUwIwYDVQQDExxNaWNyb3NvZnQgVGlt
+// SIG // Y28xJjAkBgNVBAsTHVRoYWxlcyBUU1MgRVNOOkY3QTYt
+// SIG // RTI1MS0xNTBBMSUwIwYDVQQDExxNaWNyb3NvZnQgVGlt
 // SIG // ZS1TdGFtcCBTZXJ2aWNlMIIBIjANBgkqhkiG9w0BAQEF
-// SIG // AAOCAQ8AMIIBCgKCAQEArtNMolFTX3osUiMxD2r9SOk+
-// SIG // HPjeblGceAcBWnZgaeLvj6W2xig7WdnnytNsmEJDwZgf
-// SIG // LwHh16+Buqpg9A1TeL52ukS0Rw0tuwyvgwSrdIz687dr
-// SIG // pAwV3WUNHLshAs8k0sq9wzr023uS7VjIzk2c80NxEmyd
-// SIG // Rv/xjH/NxblxaOeiPyz19D3cE9/8nviozWqXYJ3NBXvg
-// SIG // 8GKww/+2mkCdK43Cjwjv65avq9+kHKdJYO8l4wOtyxrr
-// SIG // ZeybsNsHU2dKw8YAa3dHOUFX0pWJyLN7hTd+jhyF2gHb
-// SIG // 5Au7Xs9oSaPTuqrvTQIblcmSkRg6N500WIHICkXthG9C
-// SIG // s5lDTtBiIwIDAQABo4IBGzCCARcwHQYDVR0OBBYEFIaa
-// SIG // iSZOC4k3u6pJNDVSEvC3VE5sMB8GA1UdIwQYMBaAFNVj
+// SIG // AAOCAQ8AMIIBCgKCAQEA0HsfY3ZgW+zhycEmJjFKK2Tc
+// SIG // AHL/Fct+k5Sbs3FcexvpRards41jjJUjjJJtV6ALifFW
+// SIG // eUoQXnQA1wxgysRzWYS7txFvMeaLfyDpOosy05QBbbyF
+// SIG // zoM17Px2jjO9lxyspDGRwHS/36WbQEjOT2pZrF1+DpfJ
+// SIG // V5JvY0eeSuegu6vfoQ1PtrYxh2hNWVpWm5TVFwYWmYLQ
+// SIG // iQnetFMmb4CO/7jc3Gn49P1cNm2orfZwwFXduMrf1wmZ
+// SIG // x2N8l+2bB4yLh6bJfj6Q12otQ8HvadK8gmbJfUjjB3sb
+// SIG // SB3vapU27VmCfFrVi6B/XRDEMVS55jzwzlZgY+y2YUo4
+// SIG // t/DfVac/xQIDAQABo4IBGzCCARcwHQYDVR0OBBYEFPOq
+// SIG // yuUHJvkBOTQVxgjyIggXQyT4MB8GA1UdIwQYMBaAFNVj
 // SIG // OlyKMZDzQ3t8RhvFM2hahW1VMFYGA1UdHwRPME0wS6BJ
 // SIG // oEeGRWh0dHA6Ly9jcmwubWljcm9zb2Z0LmNvbS9wa2kv
 // SIG // Y3JsL3Byb2R1Y3RzL01pY1RpbVN0YVBDQV8yMDEwLTA3
@@ -269,15 +272,15 @@ module.exports.DateResolverDialog = DateResolverDialog;
 // SIG // MAKGPmh0dHA6Ly93d3cubWljcm9zb2Z0LmNvbS9wa2kv
 // SIG // Y2VydHMvTWljVGltU3RhUENBXzIwMTAtMDctMDEuY3J0
 // SIG // MAwGA1UdEwEB/wQCMAAwEwYDVR0lBAwwCgYIKwYBBQUH
-// SIG // AwgwDQYJKoZIhvcNAQELBQADggEBAI3gBGqnMK6602pj
-// SIG // adYkMNePfmJqJ2WC0n9uyliwBfxq0mXX0h9QojNO65JV
-// SIG // Tdxpdnr9i8wxgxxuw1r/gnby6zbcro9ZkCWMiPQbxC3A
-// SIG // MyVAeOsqetyvgUEDPpmq8HpKs3f9ZtvRBIr86XGxTSZ8
-// SIG // PvPztHYkziDAom8foQgu4AS2PBQZIHU0qbdPCubnV8IP
-// SIG // SPG9bHNpRLZ628w+uHwM2uscskFHdQe+D81dLYjN1Cfb
-// SIG // TGOOxbQFQCJN/40JGnFS+7+PzQ1vX76+d6OJt+lAnYiV
-// SIG // eIl0iL4dv44vdc6vwxoMNJg5pEUAh9yirdU+LgGS9ILx
-// SIG // Aau+GMBlp+QTtHovkUkwggZxMIIEWaADAgECAgphCYEq
+// SIG // AwgwDQYJKoZIhvcNAQELBQADggEBAJMcWTxhICIAIbKm
+// SIG // TU2ZOfFdb0IieY2tsR5eU6hgOh8I+UoqC4NxUi4k5hlf
+// SIG // gbRZaWFLZJ3geI62bLjaTLX20zHRu6f8QMiFbcL15016
+// SIG // ipQg9U/S3K/eKVXncxxicy9U2DUMmSQaLgn85IJM3HDr
+// SIG // hTn3lj35zE4iOVAVuTnZqMhz0Fg0hh6G6FtXUyql3ibb
+// SIG // lQ02Gx0yrOM43wgTBY5spUbudmaYs/vTAXkY+IgHqLtB
+// SIG // f98byM3qaCCoFFgmfZplYlhJFcArUxm1fHiu9ynhBNLX
+// SIG // zFP2GNlJqBj3PGMG7qwxH3pXoC1vmB5H63BgBpX7Qpqr
+// SIG // TnTi3oIS6BtFG8fwe7EwggZxMIIEWaADAgECAgphCYEq
 // SIG // AAAAAAACMA0GCSqGSIb3DQEBCwUAMIGIMQswCQYDVQQG
 // SIG // EwJVUzETMBEGA1UECBMKV2FzaGluZ3RvbjEQMA4GA1UE
 // SIG // BxMHUmVkbW9uZDEeMBwGA1UEChMVTWljcm9zb2Z0IENv
@@ -332,46 +335,46 @@ module.exports.DateResolverDialog = DateResolverDialog;
 // SIG // c2hpbmd0b24xEDAOBgNVBAcTB1JlZG1vbmQxHjAcBgNV
 // SIG // BAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlvbjEpMCcGA1UE
 // SIG // CxMgTWljcm9zb2Z0IE9wZXJhdGlvbnMgUHVlcnRvIFJp
-// SIG // Y28xJjAkBgNVBAsTHVRoYWxlcyBUU1MgRVNOOjMyQkQt
-// SIG // RTNENS0zQjFEMSUwIwYDVQQDExxNaWNyb3NvZnQgVGlt
-// SIG // ZS1TdGFtcCBTZXJ2aWNloiMKAQEwBwYFKw4DAhoDFQD7
-// SIG // X8I3oEgt5TXIMaj5vpaSkuhCm6CBgzCBgKR+MHwxCzAJ
+// SIG // Y28xJjAkBgNVBAsTHVRoYWxlcyBUU1MgRVNOOkY3QTYt
+// SIG // RTI1MS0xNTBBMSUwIwYDVQQDExxNaWNyb3NvZnQgVGlt
+// SIG // ZS1TdGFtcCBTZXJ2aWNloiMKAQEwBwYFKw4DAhoDFQBF
+// SIG // 0y/hUG3NhvtzF17yESla9qFwp6CBgzCBgKR+MHwxCzAJ
 // SIG // BgNVBAYTAlVTMRMwEQYDVQQIEwpXYXNoaW5ndG9uMRAw
 // SIG // DgYDVQQHEwdSZWRtb25kMR4wHAYDVQQKExVNaWNyb3Nv
 // SIG // ZnQgQ29ycG9yYXRpb24xJjAkBgNVBAMTHU1pY3Jvc29m
 // SIG // dCBUaW1lLVN0YW1wIFBDQSAyMDEwMA0GCSqGSIb3DQEB
-// SIG // BQUAAgUA43zSMDAiGA8yMDIwMTIxMDIwNTgyNFoYDzIw
-// SIG // MjAxMjExMjA1ODI0WjB3MD0GCisGAQQBhFkKBAExLzAt
-// SIG // MAoCBQDjfNIwAgEAMAoCAQACAiNQAgH/MAcCAQACAhL9
-// SIG // MAoCBQDjfiOwAgEAMDYGCisGAQQBhFkKBAIxKDAmMAwG
+// SIG // BQUAAgUA43y2NDAiGA8yMDIwMTIxMDE4NTkwMFoYDzIw
+// SIG // MjAxMjExMTg1OTAwWjB3MD0GCisGAQQBhFkKBAExLzAt
+// SIG // MAoCBQDjfLY0AgEAMAoCAQACAheJAgH/MAcCAQACAhHw
+// SIG // MAoCBQDjfge0AgEAMDYGCisGAQQBhFkKBAIxKDAmMAwG
 // SIG // CisGAQQBhFkKAwKgCjAIAgEAAgMHoSChCjAIAgEAAgMB
-// SIG // hqAwDQYJKoZIhvcNAQEFBQADgYEAFURA/7Yp4BVwc1i8
-// SIG // bnGb9FD+9z/uM/btspeUhktb3nqtMg2FvbsLgyp2wh6t
-// SIG // 2gVWGwhYoWpXNccxH5sPw2hjMxVc2cpQFkNMD11Hi7SU
-// SIG // oCA+AGk7u4r7k8X3g5JOvobCI3ElTjblC6NFJ9ZfAVp/
-// SIG // wa4Q5J48EM9jDD47vsYHg6wxggMNMIIDCQIBATCBkzB8
+// SIG // hqAwDQYJKoZIhvcNAQEFBQADgYEASBVSZJhuYd1ZOxCn
+// SIG // tolQ+K6EL79UPthw3MNNhzQZfsUsUxnaY2TsyQut2NEm
+// SIG // NUfhKweFwlmULuYC/HRw+QNRUU54kdqNCmY/0u55Rklq
+// SIG // s4I4sZpqawLZ/MoLhnQK0hMlrimoCWUYNQvTyMuZ0LHG
+// SIG // M0iV8Lo5K5rSr7FpFUKI7csxggMNMIIDCQIBATCBkzB8
 // SIG // MQswCQYDVQQGEwJVUzETMBEGA1UECBMKV2FzaGluZ3Rv
 // SIG // bjEQMA4GA1UEBxMHUmVkbW9uZDEeMBwGA1UEChMVTWlj
 // SIG // cm9zb2Z0IENvcnBvcmF0aW9uMSYwJAYDVQQDEx1NaWNy
-// SIG // b3NvZnQgVGltZS1TdGFtcCBQQ0EgMjAxMAITMwAAAS6o
-// SIG // 0hkHk/Rr6AAAAAABLjANBglghkgBZQMEAgEFAKCCAUow
+// SIG // b3NvZnQgVGltZS1TdGFtcCBQQ0EgMjAxMAITMwAAASWL
+// SIG // 3otsciYx3QAAAAABJTANBglghkgBZQMEAgEFAKCCAUow
 // SIG // GgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMC8GCSqG
-// SIG // SIb3DQEJBDEiBCDYnG6Bv56RPiOHxA1jpvdTdSFXDWVJ
-// SIG // gdR/N4C1pAaW8zCB+gYLKoZIhvcNAQkQAi8xgeowgecw
-// SIG // geQwgb0EINr+zc7xiFaKqlU3SRN4r7HabRECHXsmlHoO
-// SIG // IWhMgskpMIGYMIGApH4wfDELMAkGA1UEBhMCVVMxEzAR
+// SIG // SIb3DQEJBDEiBCADwyylcir58AovNbFGCIuLb+hw+PTQ
+// SIG // B8m75TnnXH+7KDCB+gYLKoZIhvcNAQkQAi8xgeowgecw
+// SIG // geQwgb0EIF3fxrIubzBf+ol9gg4flX5i+Ub6mhZBcJbo
+// SIG // so3vQfcOMIGYMIGApH4wfDELMAkGA1UEBhMCVVMxEzAR
 // SIG // BgNVBAgTCldhc2hpbmd0b24xEDAOBgNVBAcTB1JlZG1v
 // SIG // bmQxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlv
 // SIG // bjEmMCQGA1UEAxMdTWljcm9zb2Z0IFRpbWUtU3RhbXAg
-// SIG // UENBIDIwMTACEzMAAAEuqNIZB5P0a+gAAAAAAS4wIgQg
-// SIG // dunfEgATyc9iRjSAD8gKnjCNw9Jnb9gmLnOcodQyCWIw
-// SIG // DQYJKoZIhvcNAQELBQAEggEASfIWLQ7T5kqAXvsgNzW/
-// SIG // cSByIw4NJPUk0WKfpj5Tz/QB5MxZOvLQFJ2HqUGEkC68
-// SIG // j6P1DfBs7taCXllncd3n+IdlAwTEICm6PJ8e4XogAkwH
-// SIG // A670SHLgF3n1F8xWMfVVCBIwF2u6SnLxGVorhnhbQisq
-// SIG // 8JQbs75dOwcAjI3dH3Ts8CPh19dFYXObH01kb/gTY0wQ
-// SIG // xww2CnZRY+Zk/ghAiV/WX5bPvjz7zqHzlM5Sd03Vci05
-// SIG // y6j01lRLmJe0rH4KQ98sI+wAryDrFKIsC4M8KJz4y8vD
-// SIG // yP+f2mgUdW2RYPwlvXGpOyfcEvVNfXaIvQNtE1bOZvHk
-// SIG // 59x27XKSbewrYQ==
+// SIG // UENBIDIwMTACEzMAAAEli96LbHImMd0AAAAAASUwIgQg
+// SIG // JMKgXw0mJqtrMje4JzalcyzUs8o9PWrfDq54LIfX2Vow
+// SIG // DQYJKoZIhvcNAQELBQAEggEAJ4bLEqFdyHsjf8ta1/ky
+// SIG // 0h7GqKFTdlqgBS1pLGzzPSi4T/8qbMzGJHFD1Qnhkn7Z
+// SIG // HlaOooZ6ibzhn/IzNhlqQccrRQUy2LsfidEYGGvTa+7t
+// SIG // r61pFLlJFCXIPyiGw/4OMQMG0u3/9x9sNWEukb3r/nGL
+// SIG // FHMM2c79oZGX1BaQ0BFPIT98ycHsNc3mfUQj652z66Db
+// SIG // tvLlh6rvWfhpjcbvF7XhX2aEJ4vlNLX944IMChZUdzzm
+// SIG // rbSQytz7jJUoCc1kCVDKgmqnp0ykDTRu7EzlsLsOq0YM
+// SIG // 4HwkSbh9gT/AFB8lDRKBhOesQOkB5WoF9U7agotur3Gu
+// SIG // Cm8pq8JprfXDCg==
 // SIG // End signature block

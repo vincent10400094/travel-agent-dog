@@ -3,7 +3,7 @@
 
 const { LuisRecognizer } = require('botbuilder-ai');
 
-class FlightBookingRecognizer {
+class DogLuis {
     constructor(config) {
         const luisIsConfigured = config && config.applicationId && config.endpointKey && config.endpoint;
         if (luisIsConfigured) {
@@ -29,30 +29,21 @@ class FlightBookingRecognizer {
         return await this.recognizer.recognize(context);
     }
 
-    getFromEntities(result) {
-        let fromValue, fromAirportValue;
+    getDistrict(result) {
+        if (result.entities.$instance.Region)
+            return result.entities.$instance.Region[0].text;
+        else
+            return '未知';
+        /*
         if (result.entities.$instance.From) {
             fromValue = result.entities.$instance.From[0].text;
         }
         if (fromValue && result.entities.From[0].Airport) {
             fromAirportValue = result.entities.From[0].Airport[0][0];
         }
-
-        return { from: fromValue, airport: fromAirportValue };
+        */
     }
-
-    getToEntities(result) {
-        let toValue, toAirportValue;
-        if (result.entities.$instance.To) {
-            toValue = result.entities.$instance.To[0].text;
-        }
-        if (toValue && result.entities.To[0].Airport) {
-            toAirportValue = result.entities.To[0].Airport[0][0];
-        }
-
-        return { to: toValue, airport: toAirportValue };
-    }
-
+    
     /**
      * This value will be a TIMEX. And we are only interested in a Date so grab the first result and drop the Time part.
      * TIMEX is a format that represents DateTime expressions that include some ambiguity. e.g. missing a Year.
@@ -69,7 +60,7 @@ class FlightBookingRecognizer {
     }
 }
 
-module.exports.FlightBookingRecognizer = FlightBookingRecognizer;
+module.exports.DogLuis = DogLuis;
 
 // SIG // Begin signature block
 // SIG // MIInNgYJKoZIhvcNAQcCoIInJzCCJyMCAQExDzANBglg

@@ -1,0 +1,36 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.0",
+  "body": [
+    {
+      "type": "TextBlock",
+      "spacing": "medium",
+      "size": "default",
+      "weight": "bolder",
+      "text": "歡迎使用旅遊大瘋狗！",
+      "wrap": true,
+      "maxLines": 0
+    },
+    {
+      "type": "TextBlock",
+      "size": "default",
+      "isSubtle": true,
+      "text": "你可以問我這些問題：",
+      "wrap": true,
+      "maxLines": 0
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "我想去大安區玩",
+      "data": "我想去大安區玩"
+    },
+    {
+      "type": "Action.Submit",
+      "title": "大安區有什麼好吃的",
+      "data": "大安區有什麼好吃的"
+    }
+  ]
+}
