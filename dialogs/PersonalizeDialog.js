@@ -32,12 +32,22 @@ class PersonalizeDialog extends ComponentDialog {
         this.initialDialogId = PERSONIZE_WATERFALL_DIALOG;
     }
 
-    getActionsList(district) {
+    getActionsList(district, already_seen) {
         if (district.includes('區')) {
             district = district.slice(0, 2);
         }
-        var actionList = spotFeature;
-        return spotFeature[district];
+        // var actionList = spotFeature;
+        if (already_seen) {
+            var action = []
+            for (var i in spotFeature[district]) {
+                if (!already_seen.includes(spotFeature[district][i]["id"])) {
+                    action.push(spotFeature[district][i])
+                }
+            }
+            return action;
+        } else {
+            return spotFeature[district];
+        }
     }
 
     getContextFeaturesList() {
@@ -68,8 +78,9 @@ class PersonalizeDialog extends ComponentDialog {
         // console.log(stepContext.context);
 
         // Get the actions list to choose from personalization with their features.
-        rankRequest.actions = this.getActionsList(district);
-
+        let user_id = stepContext.context._activity.recipient.id;
+        rankRequest.actions = this.getActionsList(district, this.attractions[user_id]);
+        
         // Exclude an action for personalization ranking. This action will be held at its current position.
         // rankRequest.excludedActions = getExcludedActionsList();
 
