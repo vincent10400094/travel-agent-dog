@@ -30,9 +30,10 @@ module.exports.scheduleCard = async (attractions, startPoint) => {
     var data = await getRoute(attractions, startPoint);
     var cardArray = [];
     for (let i of data) {
+        var j = JSON.stringify(i);
         var template = new ACData.Template(scheduleCardTemplate);
         var cardPayload = template.expand({
-            $root: JSON.stringify(i)
+            $root: j
         });
         var adaptiveCard = CardFactory.adaptiveCard(cardPayload);
         cardArray.push(adaptiveCard);
