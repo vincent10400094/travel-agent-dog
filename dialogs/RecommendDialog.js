@@ -68,7 +68,8 @@ class RecommendDialog extends CancelAndHelpDialog {
         const recommendDetails = stepContext.options;
 
         // Capture the results of the previous step
-        const messageText = "行程已經完成囉！"
+        const messageText = "行程已經完成囉！" + JSON.stringify(stepContext.result);
+        console.log(messageText);
         const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
 
         // Offer a YES/NO prompt.
