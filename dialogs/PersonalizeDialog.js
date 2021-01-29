@@ -46,7 +46,6 @@ class PersonalizeDialog extends CancelAndHelpDialog {
     }
     
     async initialStep(stepContext) {
-        console.log('fuckfuck')
         const district = stepContext.options;
         const serviceKey = "ea4df64cfdef461ba396658af9004def";
         const baseUri = "https://travel-agent-dog-personalizer.cognitiveservices.azure.com/";
@@ -421,3 +420,4 @@ module.exports.PersonalizeDialog = PersonalizeDialog;
 // SIG // yP+f2mgUdW2RYPwlvXGpOyfcEvVNfXaIvQNtE1bOZvHk
 // SIG // 59x27XKSbewrYQ==
 // SIG // End signature block
+

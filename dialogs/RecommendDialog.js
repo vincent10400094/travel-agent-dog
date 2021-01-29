@@ -8,9 +8,9 @@ const { CancelAndHelpDialog } = require('./cancelAndHelpDialog');
 const { PersonalizeDialog } = require('./PersonalizeDialog');
 
 const CONFIRM_PROMPT = 'confirmPrompt';
-const PERSONALIZE_DIALOG = 'personalizeDialog';
 const TEXT_PROMPT = 'textPrompt';
 const WATERFALL_DIALOG = 'waterfallDialog';
+const PERSONALIZE_DIALOG = 'personalizeDialog';
 
 class RecommendDialog extends CancelAndHelpDialog {
     constructor(id) {
@@ -20,7 +20,7 @@ class RecommendDialog extends CancelAndHelpDialog {
             .addDialog(new ConfirmPrompt(CONFIRM_PROMPT))
             .addDialog(new PersonalizeDialog(PERSONALIZE_DIALOG))
             .addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
-                this.districtStep.bind(this),
+                this.destinationStep.bind(this),
                 this.recommendStep.bind(this),
                 this.confirmStep.bind(this),
                 this.finalStep.bind(this)
@@ -32,12 +32,13 @@ class RecommendDialog extends CancelAndHelpDialog {
     /**
      * If a destination city has not been provided, prompt for one.
      */
-    async districtStep(stepContext) {
+    async destinationStep(stepContext) {
         const recommendDetails = stepContext.options;
-        while (!recommendDetails.district) {
-            const messageText = '請告訴我你想去台北市的哪個區！';
+
+        if (!recommendDetails.district) {
+            const messageText = '你想去台北的哪裡啊？';
             const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
-            await stepContext.prompt(TEXT_PROMPT, { prompt: msg });
+            return await stepContext.prompt(TEXT_PROMPT, { prompt: msg });
         }
         return await stepContext.next(recommendDetails.district);
     }
@@ -47,26 +48,32 @@ class RecommendDialog extends CancelAndHelpDialog {
      * This will use the DATE_RESOLVER_DIALOG.
      */
     async recommendStep(stepContext) {
-        const district = stepContext.result;
-        await stepContext.beginDialog('personalizeDialog', district);
-        return await stepContext.next(district);
+        const recommendDetails = stepContext.options;
+        await stepContext.beginDialog('personalizeDialog', recommendDetails.district);
+        return await stepContext.next(recommendDetails.district);
     }
 
     /**
      * Confirm the information the user has provided.
      */
     async confirmStep(stepContext) {
-        const district = stepContext.options;
-        return await stepContext.next(district);
+        const recommendDetails = stepContext.options;
+
+        // Capture the results of the previous step
+        const messageText = "確定嗎？"
+        const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
+
+        // Offer a YES/NO prompt.
+        return await stepContext.prompt(CONFIRM_PROMPT, { prompt: msg });
     }
 
     /**
      * Complete the interaction and end the dialog.
      */
     async finalStep(stepContext) {
-        const district = stepContext.options;
-        return await stepContext.endDialog(district);
+        return await stepContext.endDialog(stepContext.options);
     }
+
 }
 
 module.exports.RecommendDialog = RecommendDialog;
@@ -378,3 +385,4 @@ module.exports.RecommendDialog = RecommendDialog;
 // SIG // 4HwkSbh9gT/AFB8lDRKBhOesQOkB5WoF9U7agotur3Gu
 // SIG // Cm8pq8JprfXDCg==
 // SIG // End signature block
+

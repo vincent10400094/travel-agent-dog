@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
+
 'use strict'
 const { CardFactory } = require('botbuilder');
 const { TimexProperty } = require('@microsoft/recognizers-text-data-types-timex-expression');
@@ -19,7 +20,6 @@ class MainDialog extends ComponentDialog {
 
         if (!luisRecognizer) throw new Error('[MainDialog]: Missing parameter \'luisRecognizer\' is required');
         this.luisRecognizer = luisRecognizer;
-        this.destinations = [];
 
         if (!recommendDialog) throw new Error('[MainDialog]: Missing parameter \'recommendDialog\' is required');
 
@@ -48,7 +48,6 @@ class MainDialog extends ComponentDialog {
 
         const dialogContext = await dialogSet.createContext(turnContext);
         const results = await dialogContext.continueDialog();
-        // console.log(results);
         if (results.status === DialogTurnStatus.empty) {
             await dialogContext.beginDialog(this.id);
         }
@@ -66,8 +65,7 @@ class MainDialog extends ComponentDialog {
             return await stepContext.next();
         }
 
-        // const weekLaterDate = moment().add(7, 'days').format('MMMM D, YYYY');
-        const messageText = stepContext.options.restartMsg ? stepContext.options.restartMsg : "汪汪汪，你好，我是大瘋狗！";
+        const messageText = stepContext.options.restartMsg ? stepContext.options.restartMsg : "汪汪汪，我是大瘋狗！";
         const promptMessage = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
         return await stepContext.prompt('TextPrompt', { prompt: promptMessage });
     }
@@ -80,56 +78,49 @@ class MainDialog extends ComponentDialog {
         const recommendDetails = {};
 
         if (!this.luisRecognizer.isConfigured) {
-            // LUIS is not configured, we just run the BookingDialog path.
             return await stepContext.beginDialog('recommendDialog', recommendDetails);
         }
 
         // Call LUIS and gather any potential booking details. (Note the TurnContext has the response to the prompt)
         const luisResult = await this.luisRecognizer.executeLuisQuery(stepContext.context);
-        console.log('Intent: ', LuisRecognizer.topIntent(luisResult));
-        switch (LuisRecognizer.topIntent(luisResult, 'None', 0.3)) {
+        console.log('Intent:', LuisRecognizer.topIntent(luisResult, "None", 0.3));
+        switch (LuisRecognizer.topIntent(luisResult, "None", 0.3)) {
             case 'EnterRegion': {
                 // Extract the values for the composite entities from the LUIS result.
-                // console.log(luisResult.entities.$instance.Region);
                 const district = this.luisRecognizer.getDistrict(luisResult);
-                // console.log(district);
-    
-                // Show a warning for districts not in Taipei
+
+                // Show a warning for Origin and Destination if we can't resolve them.
                 await this.showWarningForUnsupportedCities(stepContext.context, district);
-    
-                // Initialize recommendDetails.
+
                 recommendDetails.district = district;
-                // console.log('LUIS extracted these details:', JSON.stringify(recommendDetails));
-                // Run RecommendDialog.
-                await stepContext.beginDialog('recommendDialog', recommendDetails);
-                console.log('I want to fuck you');
-                break;
+                console.log('LUIS extracted these booking details:', JSON.stringify(recommendDetails));
+
+                // Run the BookingDialog passing in whatever details we have from the LUIS call, it will fill out the remainder.
+                return await stepContext.beginDialog('recommendDialog', recommendDetails);
             }
-    
+
             case 'FindSpot': {
+                // We haven't implemented the GetWeatherDialog so we just display a TODO message.
                 const getWeatherMessageText = 'TODO: get weather flow here';
                 await stepContext.context.sendActivity(getWeatherMessageText, getWeatherMessageText, InputHints.IgnoringInput);
                 break;
             }
-            
+
             case 'FindFood': {
-                // var testCard = CardFactory.adaptiveCard(TestCard);
-                // console.log(testCard);
-                // await stepContext.context.sendActivity({ attachments: [testCard] });
                 break;
             }
-            
+
             case 'Miscellaneous': {
-                const messageText = '我不擅長聊天欸...';
-                await stepContext.context.sendActivity(messageText, messageText, InputHints.IgnoringInput);
+                const message = "我是隻狗，不太擅長聊天耶⋯⋯"
+                await stepContext.context.sendActivity(message, message, InputHints.IgnoringInput);
                 break;
             }
-            
+
             default: {
                 // Catch all for unhandled intents
                 const didntUnderstandMessageText = '不好意思，我沒有聽懂欸...汪汪！';
                 await stepContext.context.sendActivity(didntUnderstandMessageText, didntUnderstandMessageText, InputHints.IgnoringInput);
-                
+
                 // // Create a Template instance from the template payload
                 // var template = new ACData.Template(welcomeCard);
                 var welcomeCard = CardFactory.adaptiveCard(WelcomeCard);
@@ -143,9 +134,10 @@ class MainDialog extends ComponentDialog {
                 // // OPTIONAL: Render the card (requires that the adaptivecards library be loaded)
                 // var adaptiveCard = CardFactory.adaptiveCard(cardPayload);
                 // var cardArray = [adaptiveCard, adaptiveCard];
-                
+
                 // await stepContext.context.sendActivity(MessageFactory.carousel(cardArray));
                 await stepContext.context.sendActivity({ attachments: [welcomeCard] });
+                break;
             }
         }
 
@@ -170,8 +162,14 @@ class MainDialog extends ComponentDialog {
      * It wraps up the sample "book a flight" interaction with a simple confirmation.
      */
     async finalStep(stepContext) {
+        if (stepContext.result) {
+            const result = stepContext.result;
+            const district = result.district;
+            console.log(district);
+        }
+
         // Restart the main dialog with a different message the second time around
-        return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: '還需要幫助嗎？' });
+        return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: '爽了嗎？' });
     }
 }
 
@@ -484,3 +482,4 @@ module.exports.MainDialog = MainDialog;
 // SIG // U7PBHO6gdS+tFXxqh1cGge/Xv3/gJXvwDFgqEkFaBz4R
 // SIG // GBNYJNS0h9ywgg==
 // SIG // End signature block
+
