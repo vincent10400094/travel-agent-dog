@@ -73,18 +73,20 @@ class PersonalizeDialog extends CancelAndHelpDialog {
             // Rank the actions
             const rankResponse = await personalizerClient.rank(rankRequest);
             // </rank>
-            // console.log(rankRequest.eventId);
- 
+           
+            /*
             console.log("\nPersonalization service thinks you would like to have:\n")
             console.log(rankResponse.rewardActionId);
+            */
 
+            console.log(rankRequest.actions);
+            for (let i = 0; i < 3; i++) {
+                console.log(rankResponse.ranking[i]);
+            }
         
             // Display top choice to user, user agrees or disagrees with top choice
             const reward = this.getReward(rankResponse.rewardActionId);
             /*
-            for (let i = 0; i < rankResponse.ranking.length; i++) {
-                console.log(rankResponse.ranking[i]);
-            }
             console.log("\nPersonalization service ranked the actions with the probabilities as below:\n");
             */
             // Send the reward for the action based on user response.

@@ -169,7 +169,7 @@ class MainDialog extends ComponentDialog {
         }
 
         // Restart the main dialog with a different message the second time around
-        return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: '爽了嗎？' });
+        return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: '還想來點別的行程嗎？' });
     }
 }
 
