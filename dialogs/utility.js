@@ -1,6 +1,7 @@
 const ACData = require("adaptivecards-templating");
 const PlaceCard = require('../data/tourist_spots');
 const templateCard = require('../templates/recommendCardTemplate');
+const { CardFactory } = require('botbuilder');
 
 function findSpot(title) {
     for (let i in PlaceCard) {

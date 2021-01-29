@@ -60,7 +60,8 @@ class RecommendDialog extends CancelAndHelpDialog {
         const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
 
         // Offer a YES/NO prompt.
-        return await stepContext.prompt(CONFIRM_PROMPT, { prompt: msg });
+        // return await stepContext.prompt(CONFIRM_PROMPT, { prompt: msg });
+        return await stepContext.next(recommendDetails.district);
     }
 
     /**

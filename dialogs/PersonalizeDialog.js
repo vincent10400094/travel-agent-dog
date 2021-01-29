@@ -1,10 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-const { InputHints, MessageFactory } = require('botbuilder');
-const { DateTimePrompt, WaterfallDialog } = require('botbuilder-dialogs');
+const { CardFactory, InputHints, MessageFactory } = require('botbuilder');
+const { TextPrompt, WaterfallDialog } = require('botbuilder-dialogs');
 const { CancelAndHelpDialog } = require('./cancelAndHelpDialog');
-const { TimexProperty } = require('@microsoft/recognizers-text-data-types-timex-expression');
 const uuid = require('uuid');
 const Personalizer = require('@azure/cognitiveservices-personalizer');
 const CognitiveServicesCredentials = require('@azure/ms-rest-azure-js').CognitiveServicesCredentials;
@@ -12,13 +11,13 @@ const readline = require('readline-sync');
 const spotFeature = require('../data/spot_feature.json');
 const generateCard = require('./utility').generateCard;
 
-const DATETIME_PROMPT = 'datetimePrompt';
-const WATERFALL_DIALOG = 'waterfallDialog';
+const WATERFALL_DIALOG = 'personWaterfallDialog';
 
 class PersonalizeDialog extends CancelAndHelpDialog {
     constructor(id) {
         super(id || 'personalizeDialog');
-        this.addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
+        this.addDialog(new TextPrompt('ThisTextPrompt'))
+            .addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
                 this.initialStep.bind(this),
                 this.finalStep.bind(this)
             ]));
@@ -52,63 +51,58 @@ class PersonalizeDialog extends CancelAndHelpDialog {
         const baseUri = "https://travel-agent-dog-personalizer.cognitiveservices.azure.com/";
         const credentials = new CognitiveServicesCredentials(serviceKey);
         const personalizerClient = new Personalizer.PersonalizerClient(credentials, baseUri);
-        let runLoop = true;
-        do {
-            let rankRequest = {}
- 
-            // Generate an ID to associate with the request.
-            rankRequest.eventId = uuid.v1();
-        
-            // Get context information from the user.
-            rankRequest.contextFeatures = this.getContextFeaturesList(stepContext);
-            // console.log(stepContext.context);
-        
-            // Get the actions list to choose from personalization with their features.
-            rankRequest.actions = this.getActionsList(district);
-        
-            // Exclude an action for personalization ranking. This action will be held at its current position.
-            // rankRequest.excludedActions = getExcludedActionsList();
-        
-            rankRequest.deferActivation = false;
-        
-            // Rank the actions
-            const rankResponse = await personalizerClient.rank(rankRequest);
-            // </rank>
-           
-            /*
-            console.log("\nPersonalization service thinks you would like to have:\n")
-            console.log(rankResponse.rewardActionId);
-            */
+        let rankRequest = {}
 
-            console.log(rankRequest.actions);
-            for (let i = 0; i < 3; i++) {
-                console.log(rankResponse.ranking[i]);
-            }
-        
-            // Display top choice to user, user agrees or disagrees with top choice
-            const reward = this.getReward(rankResponse.rewardActionId);
-            /*
-            console.log("\nPersonalization service ranked the actions with the probabilities as below:\n");
-            */
-            // Send the reward for the action based on user response.
-        
-            // <reward>
-            const rewardRequest = {
-              value: reward
-            }
-        
-            await personalizerClient.events.reward(rankRequest.eventId, rewardRequest);
-            // </reward>
-        
-            runLoop = this.continueLoop();
-        }
-        while(runLoop);
-        //console.log('fuck');
-        return await stepContext.next();
+        // Generate an ID to associate with the request.
+        rankRequest.eventId = uuid.v1();
+    
+        // Get context information from the user.
+        rankRequest.contextFeatures = this.getContextFeaturesList(stepContext);
+        // console.log(stepContext.context);
+    
+        // Get the actions list to choose from personalization with their features.
+        rankRequest.actions = this.getActionsList(district);
+    
+        // Exclude an action for personalization ranking. This action will be held at its current position.
+        // rankRequest.excludedActions = getExcludedActionsList();
+    
+        rankRequest.deferActivation = false;
+    
+        // Rank the actions
+        const rankResponse = await personalizerClient.rank(rankRequest);
+        //console.log(rankResponse);
+        // </rank>
+       
+        /*
+        console.log("\nPersonalization service thinks you would like to have:\n")
+        console.log(rankResponse.rewardActionId);
+        */
+
+        // console.log(rankRequest.actions);
+        var cards = [generateCard(rankResponse.ranking[0].id), generateCard(rankResponse.ranking[1].id), generateCard(rankResponse.ranking[2].id)];
+        await stepContext.context.sendActivity(MessageFactory.carousel(cards));
+        const messageText = "選一個喜歡的吧！都不喜歡就打不喜歡～"
+        const promptMessage = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
+        console.log('initial');
+        return await stepContext.prompt('ThisTextPrompt', { prompt: promptMessage });
     }
-
+        
     async finalStep(stepContext) {
-        console.log('finish personalize')
+        console.log('final')
+        console.log(stepContext.context);
+        // Display top choice to user, user agrees or disagrees with top choice
+        const reward = this.getReward(rankResponse.ranking);
+        console.log("\nPersonalization service ranked the actions with the probabilities as below:\n");
+        // Send the reward for the action based on user response.
+    
+        // <reward>
+        const rewardRequest = {
+          value: reward
+        }
+    
+        await personalizerClient.events.reward(rankRequest.eventId, rewardRequest);
+        // </reward>
+    
         return await stepContext.endDialog();
     }
 
