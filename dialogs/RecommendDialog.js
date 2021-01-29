@@ -43,10 +43,19 @@ class RecommendDialog extends CancelAndHelpDialog {
         return await stepContext.next(recommendDetails.district);
     }
 
+    // async recommendStep(stepContext) {
+    //     const recommendDetails = stepContext.options;
+    //     console.log('[Recommand] begin dialog');
+    //     await stepContext.beginDialog('personalizeDialog', recommendDetails.district);
+    //     console.log('[Recommand] end dialog');
+    //     return await stepContext.next(recommendDetails.district);
+    // }
+
     async recommendStep(stepContext) {
         const recommendDetails = stepContext.options;
-        await stepContext.beginDialog('personalizeDialog', recommendDetails.district);
-        return await stepContext.next(recommendDetails.district);
+        return await stepContext.beginDialog('personalizeDialog', recommendDetails.district);
+        // console.log('[Recommand] end dialog');
+        // return await stepContext.next(recommendDetails.district);
     }
 
     /**

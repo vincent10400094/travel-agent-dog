@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 const { CardFactory, InputHints, MessageFactory } = require('botbuilder');
-const { TextPrompt, WaterfallDialog } = require('botbuilder-dialogs');
-const { CancelAndHelpDialog } = require('./cancelAndHelpDialog');
+const { ComponentDialog, TextPrompt, WaterfallDialog } = require('botbuilder-dialogs');
+// const { CancelAndHelpDialog } = require('./cancelAndHelpDialog');
 const uuid = require('uuid');
 const Personalizer = require('@azure/cognitiveservices-personalizer');
 const CognitiveServicesCredentials = require('@azure/ms-rest-azure-js').CognitiveServicesCredentials;
@@ -11,20 +11,21 @@ const readline = require('readline-sync');
 const spotFeature = require('../data/spot_feature.json');
 const generateCard = require('./utility').generateCard;
 
-const WATERFALL_DIALOG = 'personWaterfallDialog';
+const PERSONIZE_WATERFALL_DIALOG = 'personWaterfallDialog';
+const SPOT_PROMPT = 'spotPrompt';
 
-class PersonalizeDialog extends CancelAndHelpDialog {
+class PersonalizeDialog extends ComponentDialog {
     constructor(id) {
         super(id || 'personalizeDialog');
-        this.addDialog(new TextPrompt('ThisTextPrompt'))
-            .addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
-                this.initialStep.bind(this),
-                this.finalStep.bind(this)
-            ]));
+        this.addDialog(new TextPrompt(SPOT_PROMPT));
+        this.addDialog(new WaterfallDialog(PERSONIZE_WATERFALL_DIALOG, [
+            this.initialStep.bind(this),
+            this.finalStep.bind(this)
+        ]));
 
-        this.initialDialogId = WATERFALL_DIALOG;
+        this.initialDialogId = PERSONIZE_WATERFALL_DIALOG;
     }
-    
+
     getActionsList(district) {
         if (district.includes('區')) {
             district = district.slice(0, 2);
@@ -32,19 +33,19 @@ class PersonalizeDialog extends CancelAndHelpDialog {
         var actionList = spotFeature;
         return spotFeature[district];
     }
-    
+
     getContextFeaturesList() {
         return [];
     }
-    
+
     getReward(response) {
         return 0.5;
     }
-    
+
     continueLoop() {
         return false;
     }
-    
+
     async initialStep(stepContext) {
         const district = stepContext.options;
         const serviceKey = "ea4df64cfdef461ba396658af9004def";
@@ -55,24 +56,24 @@ class PersonalizeDialog extends CancelAndHelpDialog {
 
         // Generate an ID to associate with the request.
         rankRequest.eventId = uuid.v1();
-    
+
         // Get context information from the user.
         rankRequest.contextFeatures = this.getContextFeaturesList(stepContext);
         // console.log(stepContext.context);
-    
+
         // Get the actions list to choose from personalization with their features.
         rankRequest.actions = this.getActionsList(district);
-    
+
         // Exclude an action for personalization ranking. This action will be held at its current position.
         // rankRequest.excludedActions = getExcludedActionsList();
-    
+
         rankRequest.deferActivation = false;
-    
+
         // Rank the actions
         const rankResponse = await personalizerClient.rank(rankRequest);
         //console.log(rankResponse);
         // </rank>
-       
+
         /*
         console.log("\nPersonalization service thinks you would like to have:\n")
         console.log(rankResponse.rewardActionId);
@@ -81,28 +82,29 @@ class PersonalizeDialog extends CancelAndHelpDialog {
         // console.log(rankRequest.actions);
         var cards = [generateCard(rankResponse.ranking[0].id), generateCard(rankResponse.ranking[1].id), generateCard(rankResponse.ranking[2].id)];
         await stepContext.context.sendActivity(MessageFactory.carousel(cards));
-        const messageText = "選一個喜歡的吧！都不喜歡就打不喜歡～"
+        const messageText = "選一個喜歡的吧！都不喜歡就打不喜歡～";
         const promptMessage = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
-        console.log('initial');
-        return await stepContext.prompt('ThisTextPrompt', { prompt: promptMessage });
+        console.log('[PersonalizeDialog] initial');
+        // return await stepContext.prompt(SPOT_PROMPT, { prompt: promptMessage });
+        return await stepContext.prompt(SPOT_PROMPT, messageText);
     }
-        
+
     async finalStep(stepContext) {
-        console.log('final')
-        console.log(stepContext.context);
+        console.log('[PersonalizeDialog] final');
+        console.log(stepContext.result);
         // Display top choice to user, user agrees or disagrees with top choice
-        const reward = this.getReward(rankResponse.ranking);
+        // const reward = this.getReward(rankResponse.ranking);
         console.log("\nPersonalization service ranked the actions with the probabilities as below:\n");
         // Send the reward for the action based on user response.
-    
+
         // <reward>
-        const rewardRequest = {
-          value: reward
-        }
-    
-        await personalizerClient.events.reward(rankRequest.eventId, rewardRequest);
+        // const rewardRequest = {
+        //     value: reward
+        // };
+
+        // await personalizerClient.events.reward(rankRequest.eventId, rewardRequest);
         // </reward>
-    
+
         return await stepContext.endDialog();
     }
 
