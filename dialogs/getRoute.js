@@ -7,7 +7,7 @@ const getInfo = async (name) => {
     var data = await res.json();
     return {
         name: name,
-        data: findSpot(name, tourist_spots),
+        data: findSpot(name),
         address: data.results[0].address.freeformAddress,
         position: data.results[0].position
     }
