@@ -36,11 +36,13 @@
                             "items": [
                                 {
                                     "type": "TextBlock",
-                                    "text": ""
+                                    "text": "${time}",
+                                    "horizontalAlignment": "center",
+                                    "wrap": true
                                 },
                                 {
                                     "type": "TextBlock",
-                                    "text": "${time}",
+                                    "text": "${dist}",
                                     "horizontalAlignment": "center",
                                     "wrap": true
                                 },
