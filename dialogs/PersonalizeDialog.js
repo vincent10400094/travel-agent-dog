@@ -10,7 +10,8 @@ const { LuisRecognizer } = require('botbuilder-ai');
 const CognitiveServicesCredentials = require('@azure/ms-rest-azure-js').CognitiveServicesCredentials;
 const readline = require('readline-sync');
 const spotFeature = require('../data/spot_feature.json');
-const spotToFeature = require('../data/id_to_feature.json');
+const foodFeature = require('../data/food_feature.json');
+const spotToFeature = require('../data/all_id_to_feature.json');
 const generateCard = require('./utility').generateCard;
 
 const PERSONIZE_WATERFALL_DIALOG = 'personWaterfallDialog';
@@ -36,16 +37,34 @@ class PersonalizeDialog extends ComponentDialog {
         this.initialDialogId = PERSONIZE_WATERFALL_DIALOG;
     }
 
-    getActionsList(district, already_seen, dislike) {
+    getActionsList(district, already_seen, dislike, spotOrFood) {
         if (district.includes('區')) {
             district = district.slice(0, 2);
         }
         // var actionList = spotFeature;
-        
         var action = []
-        for (var i in spotFeature[district]) {
-            if (!already_seen.includes(spotFeature[district][i]["id"]) && !dislike.includes(spotFeature[district][i]["id"])) {
-                action.push(spotFeature[district][i])
+        if (spotOrFood == 0) {
+            for (var i in spotFeature[district]) {
+                if (!already_seen.includes(spotFeature[district][i]["id"]) && !dislike.includes(spotFeature[district][i]["id"])) {
+                    action.push(spotFeature[district][i])
+                }
+            }
+        } else if (spotOrFood == 1){
+            for (var i in foodFeature[district]) {
+                if (!already_seen.includes(foodFeature[district][i]["id"]) && !dislike.includes(foodFeature[district][i]["id"])) {
+                    action.push(foodFeature[district][i])
+                }
+            }
+        } else {
+            for (var i in spotFeature[district]) {
+                if (!already_seen.includes(spotFeature[district][i]["id"]) && !dislike.includes(spotFeature[district][i]["id"])) {
+                    action.push(spotFeature[district][i])
+                }
+            }
+            for (var i in foodFeature[district]) {
+                if (!already_seen.includes(foodFeature[district][i]["id"]) && !dislike.includes(foodFeature[district][i]["id"])) {
+                    action.push(foodFeature[district][i])
+                }
             }
         }
         return action;
@@ -65,7 +84,9 @@ class PersonalizeDialog extends ComponentDialog {
     }
 
     async initialStep(stepContext) {
-        const district = stepContext.options;
+        var options = stepContext.options
+        const district = options["district"];
+        const spotOrFood = options["spotOrFood"];
         const serviceKey = "ea4df64cfdef461ba396658af9004def";
         const baseUri = "https://travel-agent-dog-personalizer.cognitiveservices.azure.com/";
         const credentials = new CognitiveServicesCredentials(serviceKey);
@@ -85,10 +106,9 @@ class PersonalizeDialog extends ComponentDialog {
         this.personal_client[user_id] = [personalizerClient, rankRequest.eventId];
         // Get context information from the user.
         rankRequest.contextFeatures = this.getContextFeaturesList(user_id);
-        // console.log(stepContext.context);
 
         // Get the actions list to choose from personalization with their features.
-        rankRequest.actions = this.getActionsList(district, this.attractions[user_id], this.dislike[user_id]);
+        rankRequest.actions = this.getActionsList(district, this.attractions[user_id], this.dislike[user_id], spotOrFood);
 
         // Exclude an action for personalization ranking. This action will be held at its current position.
         // rankRequest.excludedActions = getExcludedActionsList();
@@ -105,7 +125,7 @@ class PersonalizeDialog extends ComponentDialog {
         console.log(rankResponse.rewardActionId);
         */
         this.advice[user_id] = [rankResponse.ranking[0].id, rankResponse.ranking[1].id, rankResponse.ranking[2].id]
-        // console.log(rankRequest.actions);
+        console.log(rankRequest.actions);
         var cards = [generateCard(rankResponse.ranking[0].id), generateCard(rankResponse.ranking[1].id), generateCard(rankResponse.ranking[2].id)];
         await stepContext.context.sendActivity(MessageFactory.carousel(cards));
         const messageText = "選一個喜歡的吧！都不喜歡就打不喜歡～\n 如果行程已經夠了請打規劃行程";
@@ -116,8 +136,11 @@ class PersonalizeDialog extends ComponentDialog {
     }
 
     async finalStep(stepContext) {
+        var options = stepContext.options
+        const district = options["district"];
+        const spotOrFood = options["spotOrFood"];
         console.log('[PersonalizeDialog] final');
-        console.log('user reply', stepContext.result);
+        // console.log('user reply', stepContext.result);
         var reply = stepContext.result;
         if (reply.includes("\""))
             reply = reply.slice(1, reply.length - 1);
@@ -125,6 +148,7 @@ class PersonalizeDialog extends ComponentDialog {
         let luisResult = await this.luisRecognizer.executeLuisQuery(stepContext.context);
         let top_indent = LuisRecognizer.topIntent(luisResult, "None", 0.3);
         let user_id = stepContext.context._activity.recipient.id;
+        console.log("Intent : ", top_indent);
         if (top_indent == 'Enough') {
             console.log(this.attractions[user_id]);
             let user_attraction = this.attractions[user_id]
@@ -144,7 +168,13 @@ class PersonalizeDialog extends ComponentDialog {
                 }
             }
             await this.personal_client[user_id][0].events.reward(this.personal_client[user_id][1], rewardRequest);
-            return await stepContext.replaceDialog(this.initialDialogId, stepContext.options);
+            return await stepContext.replaceDialog(this.initialDialogId, options);
+        } else if (top_indent == "FindFood" && options["spotOrFood"] != 1) {
+            options["spotOrFood"] = 1;
+            return await stepContext.replaceDialog(this.initialDialogId, options);
+        } else if (top_indent == "FindSpot" && options["spotOrFood"] != 0) {
+            options["spotOrFood"] = 0;
+            return await stepContext.replaceDialog(this.initialDialogId, options);
         }
         if (this.attractions[user_id] === undefined)
             this.attractions[user_id] = [reply];

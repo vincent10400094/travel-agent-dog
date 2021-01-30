@@ -1,5 +1,5 @@
 const ACData = require("adaptivecards-templating");
-const PlaceCard = require('../data/tourist_spots');
+const PlaceCard = require('../data/all_spot');
 const recommendCardTemplate = require('../templates/recommendCardTemplate');
 const scheduleCardTemplate = require('../templates/scheduleCardTemplate');
 const getRoute = require('./getRoute').getRoute;

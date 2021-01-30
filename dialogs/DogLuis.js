@@ -33,7 +33,7 @@ class DogLuis {
         if (result.entities.$instance.Region)
             return result.entities.$instance.Region[0].text;
         else
-            return '未知';
+            return undefined;
         /*
         if (result.entities.$instance.From) {
             fromValue = result.entities.$instance.From[0].text;

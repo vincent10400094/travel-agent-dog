@@ -44,7 +44,7 @@ class RecommendDialog extends CancelAndHelpDialog {
             const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
             return await stepContext.prompt(TEXT_PROMPT, { prompt: msg });
         }
-        return await stepContext.next(recommendDetails.district);
+        return await stepContext.next(recommendDetails);
     }
 
     // async recommendStep(stepContext) {
@@ -57,7 +57,7 @@ class RecommendDialog extends CancelAndHelpDialog {
 
     async recommendStep(stepContext) {
         const recommendDetails = stepContext.options;
-        return await stepContext.beginDialog('personalizeDialog', recommendDetails.district);
+        return await stepContext.beginDialog('personalizeDialog', recommendDetails);
     }
 
     /**

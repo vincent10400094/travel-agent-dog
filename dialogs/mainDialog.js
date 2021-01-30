@@ -91,9 +91,21 @@ class MainDialog extends ComponentDialog {
                 const district = this.luisRecognizer.getDistrict(luisResult);
 
                 // Show a warning for Origin and Destination if we can't resolve them.
-                await this.showWarningForUnsupportedCities(stepContext.context, district);
+                const supportedDistrict = ['北投', '士林', '內湖', '松山', '中山', '大同', '南港', '信義', '大安', '中正', '萬華', '文山', '北投區', '士林區', '內湖區', '松山區', '中山區', '大同區', '南港區', '信義區', '大安區', '中正區', '萬華區', '文山區'];
+                
+                if (district === undefined) {
+                    const messageText = '請指定台北市的行政區！';
+                    await stepContext.context.sendActivity(messageText, messageText, InputHints.IgnoringInput);
+                    break;
+                } else if (!supportedDistrict.includes(district)) {
+                    const messageText = '很抱歉，旅遊大瘋狗的管轄範圍只有台北市！';
+                    await stepContext.context.sendActivity(messageText, messageText, InputHints.IgnoringInput);
+                    break;
+                }
+                // await this.showWarningForUnsupportedCities(stepContext.context, district);
 
                 recommendDetails.district = district;
+                recommendDetails.spotOrFood = -1;
                 console.log('LUIS extracted these booking details:', JSON.stringify(recommendDetails));
 
                 console.log('[mainDialog] begin dialog');
@@ -101,14 +113,55 @@ class MainDialog extends ComponentDialog {
             }
 
             case 'FindSpot': {
-                // We haven't implemented the GetWeatherDialog so we just display a TODO message.
-                const getWeatherMessageText = 'TODO: get weather flow here';
-                await stepContext.context.sendActivity(getWeatherMessageText, getWeatherMessageText, InputHints.IgnoringInput);
-                break;
+                
+                const district = this.luisRecognizer.getDistrict(luisResult);
+                console.log(district)
+                // Show a warning for Origin and Destination if we can't resolve them.
+                // await this.showWarningForUnsupportedCities(stepContext.context, district);
+                const supportedDistrict = ['北投', '士林', '內湖', '松山', '中山', '大同', '南港', '信義', '大安', '中正', '萬華', '文山', '北投區', '士林區', '內湖區', '松山區', '中山區', '大同區', '南港區', '信義區', '大安區', '中正區', '萬華區', '文山區'];
+                
+                if (district  === undefined) {
+                    console.log("undefined")
+                    const messageText = '請指定台北市的行政區！';
+                    await stepContext.context.sendActivity(messageText, messageText, InputHints.IgnoringInput);
+                    break;
+                } else if (!supportedDistrict.includes(district)) {
+                    const messageText = '很抱歉，旅遊大瘋狗的管轄範圍只有台北市！';
+                    await stepContext.context.sendActivity(messageText, messageText, InputHints.IgnoringInput);
+                    break;
+                }
+
+                recommendDetails.district = district;
+                recommendDetails.spotOrFood = 0;
+                console.log('LUIS extracted these booking details:', JSON.stringify(recommendDetails));
+
+                console.log('[mainDialog] begin dialog');
+                return await stepContext.beginDialog('recommendDialog', recommendDetails);
             }
 
             case 'FindFood': {
-                break;
+                const district = this.luisRecognizer.getDistrict(luisResult);
+
+                // Show a warning for Origin and Destination if we can't resolve them.
+                // await this.showWarningForUnsupportedCities(stepContext.context, district);
+                const supportedDistrict = ['北投', '士林', '內湖', '松山', '中山', '大同', '南港', '信義', '大安', '中正', '萬華', '文山', '北投區', '士林區', '內湖區', '松山區', '中山區', '大同區', '南港區', '信義區', '大安區', '中正區', '萬華區', '文山區'];
+
+                if (district  === undefined) {
+                    const messageText = '請指定台北市的行政區！';
+                    await stepContext.context.sendActivity(messageText, messageText, InputHints.IgnoringInput);
+                    break;
+                } else if (!supportedDistrict.includes(district)) {
+                    const messageText = '很抱歉，旅遊大瘋狗的管轄範圍只有台北市！';
+                    await stepContext.context.sendActivity(messageText, messageText, InputHints.IgnoringInput);
+                    break;
+                }
+
+                recommendDetails.district = district;
+                recommendDetails.spotOrFood = 1;
+                console.log('LUIS extracted these booking details:', JSON.stringify(recommendDetails));
+
+                console.log('[mainDialog] begin dialog');
+                return await stepContext.beginDialog('recommendDialog', recommendDetails);
             }
 
             case 'Miscellaneous': {
@@ -164,14 +217,13 @@ class MainDialog extends ComponentDialog {
      */
     async finalStep(stepContext) {
         console.log('[mainDialog] final');
-        if (stepContext.result) {
-            const result = stepContext.result;
-            const district = result.district;
-            console.log(district);
-        }
+        if (stepContext.reason == 'endCalled') {
+            return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: '推薦完成，還想來點別的行程嗎？' });
 
-        // Restart the main dialog with a different message the second time around
-        return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: '推薦完成，還想來點別的行程嗎？' });
+        } else {
+            // Restart the main dialog with a different message the second time around
+            return await stepContext.replaceDialog(this.initialDialogId, { restartMsg: '想去台北的哪裡嗎？' });
+        }
     }
 }
 
