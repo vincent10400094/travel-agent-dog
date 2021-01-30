@@ -122,19 +122,7 @@ class MainDialog extends ComponentDialog {
                 const didntUnderstandMessageText = '不好意思，我沒有聽懂欸...汪汪！';
                 await stepContext.context.sendActivity(didntUnderstandMessageText, didntUnderstandMessageText, InputHints.IgnoringInput);
 
-                // // Create a Template instance from the template payload
-                // var template = new ACData.Template(welcomeCard);
                 var welcomeCard = CardFactory.adaptiveCard(WelcomeCard);
-
-                // // Expand the template with your `$root` data object.
-                // // This binds it to the data and produces the final Adaptive Card payload
-                // var cardPayload = template.expand({
-                //     $root: DataCard
-                // });
-
-                // // OPTIONAL: Render the card (requires that the adaptivecards library be loaded)
-                // var adaptiveCard = CardFactory.adaptiveCard(cardPayload);
-                // var cardArray = [adaptiveCard, adaptiveCard];
 
                 // await stepContext.context.sendActivity(MessageFactory.carousel(cardArray));
                 await stepContext.context.sendActivity({ attachments: [welcomeCard] });

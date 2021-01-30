@@ -46,7 +46,7 @@
                                 },
                                 {
                                     "type": "TextBlock",
-                                    "text": "---------->",
+                                    "text": "---->",
                                     "size": "ExtraLarge",
                                     "horizontalAlignment": "center",
                                     "wrap": true
